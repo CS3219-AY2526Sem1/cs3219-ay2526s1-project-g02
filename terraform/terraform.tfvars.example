@@ -1,0 +1,28 @@
+# GCP Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# Cluster Configuration
+cluster_name = "noclue-cluster"
+environment  = "dev"
+
+# GKE Node Pool Configuration
+gke_num_nodes    = 2
+gke_machine_type = "e2-medium"
+gke_disk_size_gb = 50
+gke_min_nodes    = 1
+gke_max_nodes    = 5
+
+# Network Configuration
+network_name  = "noclue-network"
+subnet_name   = "noclue-subnet"
+subnet_cidr   = "10.0.0.0/24"
+pods_cidr     = "10.1.0.0/16"
+services_cidr = "10.2.0.0/16"
+
+# Application Configuration
+supabase_url      = "https://your-project.supabase.co"
+supabase_key      = "your-supabase-anon-key"
+frontend_replicas = 2
+backend_replicas  = 2

@@ -1,15 +1,9 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UsersService } from './users.service';
-import { CreateUserInput, UpdateUserInput } from '@noclue/common';
+import { UsersService, CreateUserInput, UpdateUserInput } from './users.service';
 
 @Resolver('User')
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
-
-  @Query()
-  hello(): string {
-    return 'Hello from NestJS GraphQL!';
-  }
 
   @Query()
   async users() {
@@ -19,6 +13,11 @@ export class UsersResolver {
   @Query()
   async user(@Args('id') id: string) {
     return this.usersService.findOne(id);
+  }
+
+  @Query()
+  async userByEmail(@Args('email') email: string) {
+    return this.usersService.findByEmail(email);
   }
 
   @Mutation()

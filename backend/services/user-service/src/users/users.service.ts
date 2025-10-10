@@ -1,6 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { supabase } from '../config/supabase.config';
-import { User, CreateUserInput, UpdateUserInput } from '@noclue/common';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_KEY || '',
+);
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role?: string;
+  skillLevel?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserInput {
+  email: string;
+  name: string;
+  role?: string;
+  skillLevel?: string;
+}
+
+export interface UpdateUserInput {
+  email?: string;
+  name?: string;
+  role?: string;
+  skillLevel?: string;
+}
 
 @Injectable()
 export class UsersService {
@@ -24,6 +52,23 @@ export class UsersService {
       .from(this.tableName)
       .select('*')
       .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new Error(`Failed to fetch user: ${error.message}`);
+    }
+
+    return this.mapToUser(data);
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('email', email)
       .single();
 
     if (error) {
@@ -83,6 +128,8 @@ export class UsersService {
       id: data.id,
       email: data.email,
       name: data.name,
+      role: data.role,
+      skillLevel: data.skill_level,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };

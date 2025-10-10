@@ -1,0 +1,46 @@
+# Stage 1: Build common package
+FROM node:20-alpine AS common-builder
+WORKDIR /app
+COPY common/package*.json ./common/
+COPY common/tsconfig.json ./common/
+COPY common/src ./common/src
+WORKDIR /app/common
+RUN npm ci && npm run build
+
+# Stage 2: Build service
+FROM node:20-alpine AS service-builder
+WORKDIR /app
+
+# Copy common package from previous stage
+COPY --from=common-builder /app/common ./common
+
+# Copy service files
+COPY backend/services/question-service/package*.json ./backend/services/question-service/
+COPY backend/services/question-service/tsconfig.json ./backend/services/question-service/
+COPY backend/services/question-service/nest-cli.json ./backend/services/question-service/
+COPY backend/services/question-service/src ./backend/services/question-service/src
+
+# Install dependencies and build
+WORKDIR /app/backend/services/question-service
+RUN npm ci
+RUN npm run build
+
+# Stage 3: Production
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+# Copy common package
+COPY --from=common-builder /app/common /app/common
+
+# Copy built service
+COPY --from=service-builder /app/backend/services/question-service/dist ./dist
+COPY --from=service-builder /app/backend/services/question-service/package*.json ./
+COPY --from=service-builder /app/backend/services/question-service/node_modules ./node_modules
+
+EXPOSE 4002
+
+ENV PORT 4002
+
+CMD ["node", "dist/main.js"]

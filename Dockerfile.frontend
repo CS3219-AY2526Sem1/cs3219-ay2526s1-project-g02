@@ -1,5 +1,5 @@
 # Stage 1: Build common package
-FROM node:18-alpine AS common-builder
+FROM node:20-alpine AS common-builder
 WORKDIR /app
 COPY common/package*.json ./common/
 COPY common/tsconfig.json ./common/
@@ -8,7 +8,7 @@ WORKDIR /app/common
 RUN npm ci && npm run build
 
 # Stage 2: Build frontend
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 
 # Copy root package files
@@ -30,7 +30,7 @@ RUN npm ci
 RUN npm run build
 
 # Stage 3: Production
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
