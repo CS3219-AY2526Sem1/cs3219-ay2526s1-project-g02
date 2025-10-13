@@ -1,19 +1,10 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  // Enable CORS
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
-  });
-
-  const port = process.env.PORT || 4001;
-  await app.listen(port);
-  console.log(`User Service is running on: http://localhost:${port}`);
-  console.log(`GraphQL Playground: http://localhost:${port}/graphql`);
+  const app = await NestFactory.create(AppModule, { abortOnError: false });
+  app.enableCors({ origin: ["http://localhost:3000"] }); // FE dev origin
+  await app.listen(process.env.PORT ? Number(process.env.PORT) : 3001);
 }
-
 bootstrap();
