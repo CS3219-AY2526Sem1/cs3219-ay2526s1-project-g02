@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+export interface TestCase {
+  id: string;
+  questionId: string;
+  input: any; // JSONB - flexible input structure
+  expectedOutput: any; // JSONB - flexible output structure
+  isHidden: boolean;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Question {
   id: string;
   title: string;
@@ -9,7 +20,6 @@ export interface Question {
   category: string[];
   examples?: string;
   constraints?: string;
-  testCases?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,7 +115,7 @@ export class QuestionsService {
   }
 
   /**
-   * Retrieve K random questions with optional filters for session allocation (FR17.2)
+   * Retrieve K random questions with optional filters for session allocation
    * @param count Number of questions to retrieve
    * @param difficulty Optional difficulty filter (Easy, Medium, Hard)
    * @param categories Optional array of categories to filter by
@@ -165,6 +175,65 @@ export class QuestionsService {
     return shuffled;
   }
 
+  /**
+   * Get all test cases for a specific question 
+   * All test cases are visible to users
+   * @param questionId The question ID
+   * @returns Array of test cases with input and expected output
+   */
+  async getTestCasesForQuestion(questionId: string): Promise<TestCase[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('test_cases')
+        .select('*')
+        .eq('question_id', questionId)
+        .order('order_index', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch test cases: ${error.message}`);
+      }
+
+      return (data || []).map(this.mapToTestCase);
+    } catch (err) {
+      console.error('Get test cases error:', err);
+      throw new Error(`Failed to retrieve test cases: ${err}`);
+    }
+  }
+
+  /**
+   * Get test cases for multiple questions (for session allocation)
+   * All test cases are visible to users
+   * @param questionIds Array of question IDs
+   * @returns Map of question ID to test cases array
+   */
+  async getTestCasesForQuestions(questionIds: string[]): Promise<Map<string, TestCase[]>> {
+    try {
+      const { data, error } = await this.supabase
+        .from('test_cases')
+        .select('*')
+        .in('question_id', questionIds)
+        .order('order_index', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch test cases: ${error.message}`);
+      }
+
+      // Group test cases by question_id
+      const testCasesByQuestion = new Map<string, TestCase[]>();
+      (data || []).forEach((tc) => {
+        const testCase = this.mapToTestCase(tc);
+        const existing = testCasesByQuestion.get(testCase.questionId) || [];
+        existing.push(testCase);
+        testCasesByQuestion.set(testCase.questionId, existing);
+      });
+
+      return testCasesByQuestion;
+    } catch (err) {
+      console.error('Get test cases for questions error:', err);
+      throw new Error(`Failed to retrieve test cases for questions: ${err}`);
+    }
+  }
+
   async create(input: CreateQuestionInput): Promise<Question> {
     try {
       const { data, error } = await this.supabase
@@ -222,7 +291,19 @@ export class QuestionsService {
       category: data.category,
       examples: data.examples,
       constraints: data.constraints,
-      testCases: data.test_cases,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  private mapToTestCase(data: any): TestCase {
+    return {
+      id: data.id,
+      questionId: data.question_id,
+      input: data.input,
+      expectedOutput: data.expected_output,
+      isHidden: data.is_hidden,
+      orderIndex: data.order_index,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };

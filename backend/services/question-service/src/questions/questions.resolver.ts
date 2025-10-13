@@ -1,5 +1,33 @@
-import { Resolver, Query, Mutation, Args, ObjectType, Field, InputType, ID } from '@nestjs/graphql';
-import { QuestionsService, Question as QuestionInterface, CreateQuestionInput as CreateInput, UpdateQuestionInput as UpdateInput } from './questions.service';
+import { Resolver, Query, Mutation, Args, ObjectType, Field, InputType, ID, Int } from '@nestjs/graphql';
+import GraphQLJSON from 'graphql-type-json';
+import { QuestionsService, Question as QuestionInterface, TestCase as TestCaseInterface, CreateQuestionInput as CreateInput, UpdateQuestionInput as UpdateInput } from './questions.service';
+
+@ObjectType()
+export class TestCase {
+  @Field(() => ID)
+  id: string;
+
+  @Field(() => ID)
+  questionId: string;
+
+  @Field(() => GraphQLJSON, { description: 'Input data in JSON format' })
+  input: any;
+
+  @Field(() => GraphQLJSON, { description: 'Expected output in JSON format' })
+  expectedOutput: any;
+
+  @Field(() => Boolean)
+  isHidden: boolean;
+
+  @Field(() => Int)
+  orderIndex: number;
+
+  @Field()
+  createdAt: string;
+
+  @Field()
+  updatedAt: string;
+}
 
 @ObjectType()
 export class Question {
@@ -131,5 +159,12 @@ export class QuestionsResolver {
   @Mutation(() => Boolean)
   async deleteQuestion(@Args('id') id: string) {
     return this.questionsService.delete(id);
+  }
+
+  @Query(() => [TestCase], { description: 'Get all test cases for a question - all test cases are visible to users' })
+  async testCasesForQuestion(
+    @Args('questionId', { type: () => ID }) questionId: string,
+  ) {
+    return this.questionsService.getTestCasesForQuestion(questionId);
   }
 }
