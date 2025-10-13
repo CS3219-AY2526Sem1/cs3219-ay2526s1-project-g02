@@ -104,6 +104,67 @@ export class QuestionsService {
     return (data || []).map(this.mapToQuestion);
   }
 
+  /**
+   * Retrieve K random questions with optional filters for session allocation (FR17.2)
+   * @param count Number of questions to retrieve
+   * @param difficulty Optional difficulty filter (Easy, Medium, Hard)
+   * @param categories Optional array of categories to filter by
+   * @returns Array of random questions matching the criteria
+   */
+  async findRandomQuestions(
+    count: number,
+    difficulty?: string,
+    categories?: string[],
+  ): Promise<Question[]> {
+    try {
+      let query = this.supabase
+        .from(this.tableName)
+        .select('*');
+
+      // Apply difficulty filter if provided
+      if (difficulty) {
+        query = query.eq('difficulty', difficulty);
+      }
+
+      // Apply category filter if provided
+      if (categories && categories.length > 0) {
+        // Check if any of the provided categories exist in the question's category array
+        query = query.overlaps('category', categories);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw new Error(`Failed to fetch random questions: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      // Shuffle and take K questions
+      const shuffled = this.shuffleArray(data);
+      const selected = shuffled.slice(0, Math.min(count, shuffled.length));
+
+      return selected.map(this.mapToQuestion);
+    } catch (err) {
+      console.error('Find random questions error:', err);
+      throw new Error(`Failed to retrieve random questions: ${err}`);
+    }
+  }
+
+  /**
+   * Fisher-Yates shuffle algorithm for randomizing question selection
+   */
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   async create(input: CreateQuestionInput): Promise<Question> {
     try {
       const { data, error } = await this.supabase

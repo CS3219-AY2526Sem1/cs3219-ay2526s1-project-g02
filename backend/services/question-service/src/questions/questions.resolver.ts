@@ -106,6 +106,15 @@ export class QuestionsResolver {
     return this.questionsService.findByCategory(category);
   }
 
+  @Query(() => [Question], { description: 'Allocate K random questions for a session with optional filters' })
+  async allocateQuestionsForSession(
+    @Args('count', { type: () => Number, description: 'Number of questions to allocate' }) count: number,
+    @Args('difficulty', { type: () => String, nullable: true, description: 'Filter by difficulty (Easy, Medium, Hard)' }) difficulty?: string,
+    @Args('categories', { type: () => [String], nullable: true, description: 'Filter by categories/topics' }) categories?: string[],
+  ) {
+    return this.questionsService.findRandomQuestions(count, difficulty, categories);
+  }
+
   @Mutation(() => Question)
   async createQuestion(@Args('input') input: CreateQuestionInput) {
     return this.questionsService.create(input);
