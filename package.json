@@ -24,7 +24,11 @@
     "test": "npm run test --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@nestjs/testing": "^10.4.20",
+    "@types/jest": "^30.0.0",
+    "concurrently": "^8.2.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5"
   },
   "engines": {
     "node": ">=20.11.0",
