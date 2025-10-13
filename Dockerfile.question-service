@@ -5,7 +5,7 @@ COPY common/package*.json ./common/
 COPY common/tsconfig.json ./common/
 COPY common/src ./common/src
 WORKDIR /app/common
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
 # Stage 2: Build service
 FROM node:20-alpine AS service-builder
@@ -14,33 +14,46 @@ WORKDIR /app
 # Copy common package from previous stage
 COPY --from=common-builder /app/common ./common
 
+# Copy backend tsconfig (parent config)
+COPY backend/tsconfig.json ./backend/tsconfig.json
+
 # Copy service files
 COPY backend/services/question-service/package*.json ./backend/services/question-service/
 COPY backend/services/question-service/tsconfig.json ./backend/services/question-service/
 COPY backend/services/question-service/nest-cli.json ./backend/services/question-service/
 COPY backend/services/question-service/src ./backend/services/question-service/src
 
-# Install dependencies and build
+# Link common package globally
+WORKDIR /app/common
+RUN npm link
+
+# Install dependencies and link common package
 WORKDIR /app/backend/services/question-service
-RUN npm ci
+# Link @noclue/common before installing other dependencies
+RUN npm link @noclue/common
+# Install remaining dependencies
+RUN npm install --legacy-peer-deps
 RUN npm run build
 
 # Stage 3: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
-# Copy common package
+# Copy common package and link it
 COPY --from=common-builder /app/common /app/common
+WORKDIR /app/common
+RUN npm link
 
-# Copy built service
+# Copy built service, package files, and node_modules
+WORKDIR /app
 COPY --from=service-builder /app/backend/services/question-service/dist ./dist
 COPY --from=service-builder /app/backend/services/question-service/package*.json ./
 COPY --from=service-builder /app/backend/services/question-service/node_modules ./node_modules
 
 EXPOSE 4002
 
-ENV PORT 4002
+ENV PORT=4002
 
 CMD ["node", "dist/main.js"]
