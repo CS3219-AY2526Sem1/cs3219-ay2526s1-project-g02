@@ -11,6 +11,7 @@
     "lint": "eslint \"{src,test}/**/*.ts\" --fix"
   },
   "dependencies": {
+    "@nestjs/apollo": "^12.0.11",
     "@nestjs/common": "^10.3.0",
     "@nestjs/core": "^10.3.0",
     "@nestjs/graphql": "^12.0.11",
