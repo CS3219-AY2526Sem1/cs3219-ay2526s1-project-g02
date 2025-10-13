@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_KEY || '',
-);
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export interface Question {
   id: string;
@@ -42,9 +37,17 @@ export interface UpdateQuestionInput {
 @Injectable()
 export class QuestionsService {
   private readonly tableName = 'questions';
+  private readonly supabase: SupabaseClient;
+
+  constructor() {
+    this.supabase = createClient(
+      process.env.SUPABASE_URL || '',
+      process.env.SUPABASE_KEY || '',
+    );
+  }
 
   async findAll(): Promise<Question[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .order('created_at', { ascending: false });
@@ -57,7 +60,7 @@ export class QuestionsService {
   }
 
   async findOne(id: string): Promise<Question | null> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
@@ -74,7 +77,7 @@ export class QuestionsService {
   }
 
   async findByDifficulty(difficulty: string): Promise<Question[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('difficulty', difficulty)
@@ -88,7 +91,7 @@ export class QuestionsService {
   }
 
   async findByCategory(category: string): Promise<Question[]> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .contains('category', [category])
@@ -102,21 +105,27 @@ export class QuestionsService {
   }
 
   async create(input: CreateQuestionInput): Promise<Question> {
-    const { data, error } = await supabase
-      .from(this.tableName)
-      .insert([input])
-      .select()
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .insert([input])
+        .select()
+        .single();
 
-    if (error) {
-      throw new Error(`Failed to create question: ${error.message}`);
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Failed to create question: ${error.message}`);
+      }
+
+      return this.mapToQuestion(data);
+    } catch (err) {
+      console.error('Create question error:', err);
+      throw new Error(`Failed to create question: ${err}`);
     }
-
-    return this.mapToQuestion(data);
   }
 
   async update(id: string, input: UpdateQuestionInput): Promise<Question> {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .update(input)
       .eq('id', id)
@@ -131,7 +140,7 @@ export class QuestionsService {
   }
 
   async delete(id: string): Promise<boolean> {
-    const { error } = await supabase
+    const { error } = await this.supabase
       .from(this.tableName)
       .delete()
       .eq('id', id);
