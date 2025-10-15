@@ -9,7 +9,11 @@
     "watch": "tsc --watch",
     "clean": "rm -rf dist"
   },
-  "keywords": ["graphql", "schema", "types"],
+  "keywords": [
+    "graphql",
+    "schema",
+    "types"
+  ],
   "dependencies": {
     "graphql": "^16.8.1"
   },
