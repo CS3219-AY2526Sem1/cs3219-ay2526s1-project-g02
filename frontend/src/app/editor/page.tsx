@@ -1,13 +1,11 @@
-"use client";
-import MonacoEditor from "@monaco-editor/react";
+import Editor from "@/lib/components/editor";
 
 export default function EditorPage() {
   return (
     <div>
       <h1>Editor</h1>
-      <MonacoEditor
+      <Editor
         height={"100vh"}
-        theme="vs-dark"
         defaultLanguage="javascript"
         defaultValue="console.log('Hello, world!');"
       />
