@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.8.10",
+    "@monaco-editor/react": "^4.7.0",
     "@noclue/common": "*",
     "graphql": "^16.8.1",
     "next": "^14.2.33",
