@@ -74,9 +74,13 @@ export class MatchingService {
             let potentialCandidate: QueueMember;
             try {
                 potentialCandidate = JSON.parse(candidateStr) as QueueMember;
+                if (!potentialCandidate || !potentialCandidate.userId) {
+                    throw new Error("Malformed candidate");
+                }
             }  catch (e) {
-                this.logger.log(`Failed to parse queue member JSON: ${candidateStr}`, e.stack);
+                this.logger.warn(`Failed to parse queue member JSON: ${candidateStr}`);
                 await this.redisService.removeUserFromQueue(key, candidateStr); // remove malformed entry
+                this.logger.log(`Removing malformed entry ${potentialCandidate?.userId} from queue ${key}`);
                 continue; // skip malformed entry
             }
 
@@ -105,6 +109,7 @@ export class MatchingService {
         }
 
         // No match found...
+        this.logger.log(`No match found for user ${user.userId}`);
         return {
             matchFound: false,
             queued: false,
@@ -135,6 +140,7 @@ export class MatchingService {
 
         // Remove matched user from queue
         const removedCount = await this.redisService.removeUserFromQueue(matchedCandidateKey, matchedCandidateStr);
+        this.logger.log(`Removing matched user ${matchedCandidate.userId} from queue ${matchedCandidateKey}`);
 
         if (removedCount !== 1) {
             this.logger.warn(`Potential race condition: Tried removing ${matchedCandidate.userId} but ZREM returned 0.`);

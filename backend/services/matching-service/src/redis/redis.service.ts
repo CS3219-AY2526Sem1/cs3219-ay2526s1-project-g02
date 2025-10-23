@@ -66,8 +66,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
      * @param members The JSON strings of members to remove.
      * @returns The number of members removed.
      */
-    async removeUserFromQueue(key: string, members: string | string[]): Promise<number> {
-        return this.client.zrem(key, ...(Array.isArray(members) ? members : [members]));
+    async removeUserFromQueue(key: string, member: string): Promise<number> {
+        return this.client.zrem(key, member);
     }
 
     /**
