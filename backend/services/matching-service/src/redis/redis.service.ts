@@ -1,11 +1,13 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import Redis from "ioredis";
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
 export interface QueueMember {
     userId: string;
     language: string;
     topics: string[];
-    difficulty: 'easy' | 'medium' | 'hard';
+    difficulty: Difficulty;
     expiresAt: number; // Unix timestamp
 }
 
