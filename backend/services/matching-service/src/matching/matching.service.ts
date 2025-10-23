@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Difficulty, QueueMember, RedisService } from 'src/redis/redis.service';
+import { MatchingGateway } from './matching.gateway';
 
 
 /* -------------------- Interfaces -------------------- */
@@ -28,7 +29,10 @@ export class MatchingService {
     
     private readonly logger = new Logger(MatchingService.name);
 
-    constructor(private readonly redisService: RedisService) {}
+    constructor(
+        private readonly redisService: RedisService,
+        private readonly matchingGateway: MatchingGateway,    
+    ) {}
 
     async findMatchOrQueueUser(user: MatchRequest): Promise<MatchResult> {
         const { difficulty } = user;
@@ -136,10 +140,16 @@ export class MatchingService {
             this.logger.warn(`Potential race condition: Tried removing ${matchedCandidate.userId} but ZREM returned 0.`);
         } else {
             this.logger.log(`Match success! ${user.userId} paired with ${matchedCandidate.userId}`);
+            
+            // TODO: Change this to notify CollaborationService via Event Bus etc.
+            const roomInfo = { roomId: `chat-${user.userId}-${matchedCandidate.userId}` };
+            
+            this.matchingGateway.notifyMatchFound(
+                user.userId,
+                matchedCandidate.userId,
+                roomInfo
+            );
         }
-
-        // TODO: Notification logic
-
     }
 
     private getQueueKey(difficulty: Difficulty): string {
