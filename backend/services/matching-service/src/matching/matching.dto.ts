@@ -28,4 +28,10 @@ export class MatchResult {
 
     @Field({ nullable: true })
     queueKey?: string;
+
+    @Field({ nullable: true })
+    requestId?: string;
+
+    @Field({ nullable: true })
+    reason?: string;
 }
