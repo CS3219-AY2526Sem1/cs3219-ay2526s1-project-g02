@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Difficulty, QueueMember, RedisService } from 'src/redis/redis.service';
 import { MatchingGateway } from './matching.gateway';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { DatabaseService } from 'src/database/database.service';
+import { CheckService } from 'src/integrity-check/check.service';
 
 
 /* -------------------- Interfaces -------------------- */
@@ -9,6 +12,7 @@ export interface MatchRequest {
     language: string;
     topics: string[];
     difficulty: Difficulty;
+    requestId?: string;
 }
 
 export interface MatchResult {
@@ -16,6 +20,8 @@ export interface MatchResult {
     matchedUserId?: string;
     queued: boolean;
     queueKey?: string;
+    requestId?: string;
+    reason?: string;
 }
 
 /* -------------------- Constants -------------------- */
@@ -26,41 +32,91 @@ const QUEUE_TTL_SECONDS = 300; // 5 minutes
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
 export class MatchingService {
-    
+
     private readonly logger = new Logger(MatchingService.name);
+    private readonly supabase: SupabaseClient;
 
     constructor(
         private readonly redisService: RedisService,
-        private readonly matchingGateway: MatchingGateway,    
-    ) {}
+        private readonly matchingGateway: MatchingGateway,
+        private readonly dbService: DatabaseService,
+        private readonly checkService: CheckService,  
+    ) {
+        this.supabase = this.dbService.getClient();
+    }
 
     async findMatchOrQueueUser(user: MatchRequest): Promise<MatchResult> {
-        const { difficulty } = user;
+        const { userId, difficulty } = user;
 
-        // 1. Search primary queue (same difficulty)
-        let result = await this.searchQueue(user, difficulty);
-        if (result.matchFound) {
-            return result;
-        }
-
-        // 2. Search fallback queues (other difficulties)
-        const fallbackDifficulties = ['easy', 'medium', 'hard'].filter(d => d !== difficulty) as Difficulty[];
-        for (const fallbackDifficulty of fallbackDifficulties) {
-            result = await this.searchQueue(user, fallbackDifficulty);
-            if (result.matchFound) {
-                return result;
+        // Step 1. Check if user is already in active session
+        if (await this.checkService.isUserInActiveMatch(userId)) {
+            this.logger.warn(`Match request blocked: User ${userId} is already in an active match.`);
+            return {
+                matchFound: false,
+                queued: false,
+                reason: 'User already in active match',
             }
         }
 
-        // 3. No match found: queue user to wait
-        await this.queueUser(user);
+        // Step 2. Record the match request in database
+        const requestId = await this.recordNewMatchRequest(user);
+        const requestWithId: MatchRequest = { ...user, requestId };
+
+        // Step 3: Search primary queue (same difficulty)
+        let result = await this.searchQueue(requestWithId, difficulty);
+        if (result.matchFound) {
+            return { ...result, requestId };
+        }
+
+        // Step 4: Search fallback queues (other difficulties)
+        const fallbackDifficulties = ['easy', 'medium', 'hard'].filter(d => d !== difficulty) as Difficulty[];
+        for (const fallbackDifficulty of fallbackDifficulties) {
+            result = await this.searchQueue(requestWithId, fallbackDifficulty);
+            if (result.matchFound) {
+                return { ...result, requestId };
+            }
+        }
+
+        // Step 5: No match found - queue user to wait
+        await this.queueUser(requestWithId);
         return {
             matchFound: false,
             queued: true,
             queueKey: this.getQueueKey(difficulty),
+            requestId: requestId,
         };
     }
 
+    /* -------------------- Private Helper Methods -------------------- */
+    
+    // Records new match request in DB
+    private async recordNewMatchRequest(request: MatchRequest): Promise<string> {
+        const { userId, language, difficulty, topics } = request;
+        const expiresAt = new Date(Date.now() + QUEUE_TTL_SECONDS * 1000).toISOString();
+
+        this.logger.debug(`Recording new match request for user ${userId}`);
+
+        const { data, error } = await this.supabase
+            .from('match_requests')
+            .insert({
+                user_id: userId,
+                preferred_language: language,
+                preferred_difficulty: difficulty,
+                preferred_topics: topics,
+                expires_at: expiresAt
+            })
+            .select('id')
+            .single();
+        
+        if (error) {
+            this.logger.error(`Failed to record match request for user ${userId}: ${error.message}`);
+            throw new Error('Failed to persist match request');
+        }
+
+        return data!.id;
+    }
+    
+    // Searches selected queue
     private async searchQueue(
         user: MatchRequest, 
         targetDifficulty: Difficulty
@@ -116,6 +172,7 @@ export class MatchingService {
         }
     }
 
+    // Adds specified user to appropriate queue
     private async queueUser(user: MatchRequest): Promise<void> {
         const key = this.getQueueKey(user.difficulty);
         const joinTime = Math.floor(Date.now() / 1000); // Current Unix time in seconds
@@ -124,40 +181,67 @@ export class MatchingService {
         const queueMember: QueueMember = {
             ...user,
             expiresAt: expireTime,
+            requestId: user.requestId!,
         };
 
         const memberString = JSON.stringify(queueMember);
         await this.redisService.addUserToQueue(key, expireTime, memberString);
-        this.logger.log(`User ${user.userId} queued in ${key}`);
+        this.logger.log(`User ${user.userId} queued in ${key}. DB ID: ${user.requestId}`);
     }
 
+    // Cleanup - removes matched candidate from queue 
     private async finaliseMatch(
         user: MatchRequest,
         matchedCandidate: QueueMember
     ): Promise<void> {
+
+        // Step 1: Redis cleanup - remove matched candidate from queue
         const matchedCandidateKey = this.getQueueKey(matchedCandidate.difficulty);
         const matchedCandidateStr = JSON.stringify(matchedCandidate);
-
-        // Remove matched user from queue
+        
         const removedCount = await this.redisService.removeUserFromQueue(matchedCandidateKey, matchedCandidateStr);
         this.logger.log(`Removing matched user ${matchedCandidate.userId} from queue ${matchedCandidateKey}`);
-
+        
         if (removedCount !== 1) {
             this.logger.warn(`Potential race condition: Tried removing ${matchedCandidate.userId} but ZREM returned 0.`);
-        } else {
-            this.logger.log(`Match success! ${user.userId} paired with ${matchedCandidate.userId}`);
-            
-            // TODO: Change this to notify CollaborationService via Event Bus etc.
-            const roomInfo = { roomId: `chat-${user.userId}-${matchedCandidate.userId}` };
-            
-            this.matchingGateway.notifyMatchFound(
-                user.userId,
-                matchedCandidate.userId,
-                roomInfo
-            );
         }
+
+        // Step 2: Record the finalised match in database
+        const { error: matchError } = await this.supabase
+            .from('matches')
+            .insert({
+                user1_id: user.userId,
+                user2_id: matchedCandidate.userId,
+                question_id: null,
+                status: 'active',
+            });
+        
+        const { error: req1Error } = await this.supabase
+            .from('match_requests')
+            .update({ status: 'matched' })
+            .eq('id', user.requestId!);
+
+        const { error: req2Error } = await this.supabase
+            .from('match_requests')
+            .update({ status: 'matched' })
+            .eq('id', matchedCandidate.requestId!);
+        
+        if (matchError || req1Error || req2Error) {
+            this.logger.error(`Fatal DB Write error during finalisation: ${matchError?.message || req1Error?.message || req2Error?.message}`);
+        }
+
+        // Step 3: Notify both users via WebSocket
+        this.matchingGateway.notifyMatchFound(
+            user.userId,
+            matchedCandidate.userId
+        )
+
+        // TODO: Step 4: Publish to Event Bus
+        // ...notify Collaboration Service somehow...
+
     }
 
+    // Helper method to get queue key based on difficulty
     private getQueueKey(difficulty: Difficulty): string {
         return `${MATCH_QUEUE_PREFIX}${difficulty}`;
     }

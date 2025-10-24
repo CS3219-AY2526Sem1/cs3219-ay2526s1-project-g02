@@ -2,7 +2,6 @@ import { Field, InputType, ObjectType } from "@nestjs/graphql";
 
 @InputType()
 export class MatchRequestInput {
-
     @Field()
     userId: string;
 

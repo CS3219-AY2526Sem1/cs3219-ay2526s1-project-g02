@@ -9,6 +9,7 @@ export interface QueueMember {
     topics: string[];
     difficulty: Difficulty;
     expiresAt: number; // Unix timestamp
+    requestId: string;
 }
 
 @Injectable()

@@ -47,14 +47,12 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
         }
     }
 
-    notifyMatchFound(userAId: string, userBId: string, roomInfo: any): void {
+    notifyMatchFound(userAId: string, userBId: string): void {
         const userASocket = this.activeUsers.get(userAId);
         const userBSocket = this.activeUsers.get(userBId);
 
-        // TODO: Change 'roomInfo' etc. to notify CollaborationService via Event Bus etc.
         const payload = {
             matchedUserId: userBId,
-            ...roomInfo
         };
 
         if (userASocket) {

@@ -4,9 +4,11 @@ import { MatchingService } from './matching.service';
 import { MatchingGateway } from './matching.gateway';
 import { RedisModule } from 'src/redis/redis.module';
 import { TtlService } from './ttl.service';
+import { DatabaseModule } from 'src/database/database.module';
+import { CheckModule } from 'src/integrity-check/check.module';
 
 @Module({
-  imports: [RedisModule],
+  imports: [RedisModule, DatabaseModule, CheckModule],
   providers: [MatchingResolver, MatchingService, MatchingGateway, TtlService],
   exports: [MatchingService],
 })
