@@ -212,7 +212,6 @@ export class MatchingService {
             .insert({
                 user1_id: user.userId,
                 user2_id: matchedCandidate.userId,
-                question_id: null,
                 status: 'active',
             });
         
