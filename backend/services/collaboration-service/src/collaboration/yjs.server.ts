@@ -2,11 +2,14 @@ import { WebSocketServer } from 'ws';
 import * as Y from 'yjs';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 
+// Use environment variable or fallback to default port
+const DEFAULT_YJS_PORT = process.env.YJS_SERVER_PORT ? parseInt(process.env.YJS_SERVER_PORT, 10) : 1234;
+
 export class YjsServer {
   private wss: WebSocketServer;
   private docs: Map<string, Y.Doc> = new Map();
 
-  constructor(port: number = 1234) {
+  constructor(port: number = DEFAULT_YJS_PORT) {
     this.wss = new WebSocketServer({ port });
     console.log(`Y.js WebSocket server running on port ${port}`);
 
