@@ -47,25 +47,29 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
         }
     }
 
-    notifyMatchFound(userAId: string, userBId: string): void {
+    notifyMatchFound(userAId: string, userBId: string, matchId: string): void {
         const userASocket = this.activeUsers.get(userAId);
         const userBSocket = this.activeUsers.get(userBId);
 
-        const payload = {
+        const payloadA = {
             matchedUserId: userBId,
+            matchId: matchId,
         };
 
+        const payloadB = {
+            matchedUserId: userAId,
+            matchId: matchId,
+        }
+
         if (userASocket) {
-            userASocket.emit('matchFound', payload);
+            userASocket.emit('matchFound', payloadA);
             this.logger.verbose(`Notified user ${userAId} of match with ${userBId}`);
         } else {
             this.logger.warn(`User A (${userAId}) not found in active connections for notification.`);
         }
-
-        payload.matchedUserId = userAId; // Swap for user B
         
         if (userBSocket) {
-            userBSocket.emit('matchFound', payload);
+            userBSocket.emit('matchFound', payloadB);
             this.logger.verbose(`Notified user ${userBId} of match with ${userAId}`);
         } else {
             this.logger.warn(`User B (${userBId}) not found in active connections for notification.`);

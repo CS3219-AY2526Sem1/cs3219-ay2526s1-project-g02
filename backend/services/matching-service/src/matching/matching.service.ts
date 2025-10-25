@@ -272,13 +272,15 @@ export class MatchingService {
         }
 
         // Step 2: Record the finalised match in database
-        const { error: matchError } = await this.supabase
+        const {data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
                 user1_id: user.userId,
                 user2_id: matchedCandidate.userId,
                 status: 'active',
-            });
+            })
+            .select('id')
+            .single();
         
         const { error: req1Error } = await this.supabase
             .from('match_requests')
@@ -297,7 +299,8 @@ export class MatchingService {
         // Step 3: Notify both users via WebSocket
         this.matchingGateway.notifyMatchFound(
             user.userId,
-            matchedCandidate.userId
+            matchedCandidate.userId,
+            matchData!.id,
         )
 
         // TODO: Step 4: Publish to Event Bus
