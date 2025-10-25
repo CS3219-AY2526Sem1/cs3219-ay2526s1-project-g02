@@ -35,3 +35,18 @@ export class MatchResult {
     @Field({ nullable: true })
     reason?: string;
 }
+
+@InputType()
+export class CancelMatchRequestInput {
+    @Field()
+    requestId: string;
+}
+
+@ObjectType()
+export class CancellationResult {
+    @Field()
+    success: boolean;
+
+    @Field({ nullable: true })
+    reason?: string;
+}

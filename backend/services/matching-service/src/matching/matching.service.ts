@@ -4,6 +4,7 @@ import { MatchingGateway } from './matching.gateway';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from 'src/database/database.service';
 import { CheckService } from 'src/check/check.service';
+import { CancellationResult } from './matching.dto';
 
 
 /* -------------------- Interfaces -------------------- */
@@ -45,7 +46,7 @@ export class MatchingService {
         this.supabase = this.dbService.getClient();
     }
 
-    async findMatchOrQueueUser(user: MatchRequest): Promise<MatchResult> {
+    public async findMatchOrQueueUser(user: MatchRequest): Promise<MatchResult> {
         const { userId, difficulty } = user;
 
         // Step 1. Check if user is already in active session
@@ -85,6 +86,70 @@ export class MatchingService {
             queueKey: this.getQueueKey(difficulty),
             requestId: requestId,
         };
+    }
+
+    public async cancelMatchRequest(requestId: string): Promise<CancellationResult> {
+        this.logger.log(`Attempting to cancel match request with ID ${requestId}`);
+        
+        // Step 1: Search all queues for the request
+        const difficulties: Difficulty[] = ['easy', 'medium', 'hard'];
+        let matchedQueueKey: string | null = null;
+        let memberString: string | null = null;
+
+        for (const difficulty of difficulties) {
+            const key = this.getQueueKey(difficulty);
+            const candidateStrings = await this.redisService.peekCandidates(key, CANDIDATE_PEEK_COUNT); // maybe increase CANDIDATE_PEEK_COUNT if needed
+            for (const candidateStr of candidateStrings) {
+                try {
+                    const candidate = JSON.parse(candidateStr) as QueueMember;
+                    if (candidate.requestId === requestId) {
+                        matchedQueueKey = key;
+                        memberString = candidateStr;
+                        break;
+                    }
+                } catch (e) {
+                    this.logger.warn(`Failed to parse queue member JSON during cancellation request: ${candidateStr}`);
+                    continue; // skip malformed entry
+                }
+            }
+            if (matchedQueueKey) break;
+        }
+
+        // Step 2: Check if request is (a) already matched or (b) expired
+        if (!matchedQueueKey || !memberString) {
+            const { data, error } = await this.supabase
+                .from('match_requests')
+                .select('status')
+                .eq('id', requestId)
+                .single();
+            
+            // Not pending means either matched or expired
+            if (data && data.status !== 'pending') {
+                return { success: false, reason: 'Request already matched or expired' };
+            }
+
+            return { success: false, reason: 'Request not found in active queues. It may have just been matched or expired.' };
+        }
+
+        // Step 3: Remove from Redis queue
+        const removedCount = await this.redisService.removeUserFromQueue(matchedQueueKey, memberString);
+        if (removedCount !== 1) {
+            this.logger.warn(`Cancellation race condition: Redis ZREM returned ${removedCount} for ID ${requestId}. Proceeding to DB update.`);
+        }
+
+        // Step 4: Update DB status to 'cancelled'
+        const { error: dbError } = await this.supabase
+            .from('match_requests')
+            .update({ status: 'cancelled' })
+            .eq('id', requestId);
+        if (dbError) {
+            this.logger.error(`Fatal DB Write Error during cancellation for request ID ${requestId}: ${dbError.message}`);
+            return { success: false, reason: 'Database error during cancellation' };
+        }
+
+        this.logger.log(`Successfully cancelled match request with ID ${requestId}`);
+        return { success: true };
+
     }
 
     /* -------------------- Private Helper Methods -------------------- */
