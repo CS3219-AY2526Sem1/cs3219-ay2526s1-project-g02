@@ -9,7 +9,9 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-    "test": "jest --config ./jest-unit.json"
+    "test": "jest --config ./jest-unit.json",
+    "test:cov": "jest --config ./jest-unit.json --coverage",
+    "test:watch": "jest --config ./jest-unit.json --watch"
   },
   "dependencies": {
     "@apollo/subgraph": "^2.5.5",
