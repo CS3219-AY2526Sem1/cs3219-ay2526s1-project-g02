@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from 'src/database/database.service';
 import { CheckService } from 'src/check/check.service';
 import { CancellationResult } from './matching.dto';
+import { EventBusService } from 'src/event-bus/event-bus.service';
 
 
 /* -------------------- Interfaces -------------------- */
@@ -41,7 +42,8 @@ export class MatchingService {
         private readonly redisService: RedisService,
         private readonly matchingGateway: MatchingGateway,
         private readonly dbService: DatabaseService,
-        private readonly checkService: CheckService,  
+        private readonly checkService: CheckService,
+        private readonly eventBusService: EventBusService,
     ) {
         this.supabase = this.dbService.getClient();
     }
@@ -303,9 +305,17 @@ export class MatchingService {
             matchData!.id,
         )
 
-        // TODO: Step 4: Publish to Event Bus
-        // ...notify Collaboration Service somehow...
-
+        // Step 4: Publish to Event Bus (to notify Collaboration Service)
+        const user1TopicsSet = new Set(user.topics);
+        const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
+        this.eventBusService.publishMatchFound({
+            matchId: matchData!.id,
+            user1Id: user.userId,
+            user2Id: matchedCandidate.userId,
+            difficulty: user.difficulty,
+            language: user.language,
+            commonTopics: commonTopics,
+        })
     }
 
     // Helper method to get queue key based on difficulty
