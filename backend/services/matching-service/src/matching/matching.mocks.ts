@@ -1,4 +1,4 @@
-import { Difficulty, QueueMember } from "src/redis/redis.service";
+import { Difficulty, QueueMember } from "src/utils/types";
 
 // Internal map to hold state of 3 queues (easy, medium, hard)
 const mockQueueData: Map<string, string[]> = new Map();

@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Difficulty, QueueMember, RedisService } from 'src/redis/redis.service';
+import { RedisService } from 'src/redis/redis.service';
 import { MatchingGateway } from './matching.gateway';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from 'src/database/database.service';
 import { CheckService } from 'src/check/check.service';
 import { CancellationResult } from './matching.dto';
 import { EventBusService } from 'src/event-bus/event-bus.service';
+import { Difficulty, QueueMember } from 'src/utils/types';
+import { getCurrentUnixTimestamp } from 'src/utils/utils';
 
 
 /* -------------------- Interfaces -------------------- */
@@ -242,7 +244,7 @@ export class MatchingService {
     // Adds specified user to appropriate queue
     private async queueUser(user: MatchRequest): Promise<void> {
         const key = this.getQueueKey(user.difficulty);
-        const joinTime = Math.floor(Date.now() / 1000); // Current Unix time in seconds
+        const joinTime = getCurrentUnixTimestamp();
         const expireTime = joinTime + QUEUE_TTL_SECONDS
 
         const queueMember: QueueMember = {

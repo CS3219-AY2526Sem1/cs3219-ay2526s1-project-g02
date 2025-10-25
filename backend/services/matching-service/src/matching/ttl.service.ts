@@ -2,7 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { DatabaseService } from "src/database/database.service";
-import { QueueMember, RedisService } from "src/redis/redis.service";
+import { RedisService } from "src/redis/redis.service";
+import { QueueMember } from "src/utils/types";
+import { getCurrentUnixTimestamp } from "src/utils/utils";
 
 @Injectable()
 export class TtlService {
@@ -23,7 +25,7 @@ export class TtlService {
 
     @Cron(CronExpression.EVERY_MINUTE)
     async handleCleanup() {
-        const now = Math.floor(Date.now() / 1000); // current time in seconds
+        const now = getCurrentUnixTimestamp(); // current time in seconds
         this.logger.debug(`Running TTL cleanup at ${new Date().toISOString()} | Max Score: ${now}`);
 
         for (const key of this.queueKeys) {

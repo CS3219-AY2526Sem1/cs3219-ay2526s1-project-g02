@@ -1,9 +1,11 @@
-import { Difficulty, QueueMember, RedisService } from "src/redis/redis.service";
+import { RedisService } from "src/redis/redis.service";
 import { mockRedisService, mockMatchingGateway } from "./matching.mocks";
 import { MatchingService, MatchRequest } from "./matching.service";
 import { Test, TestingModule } from '@nestjs/testing';
 import { MatchingGateway } from "./matching.gateway";
-import { ConsoleLogger, Logger } from "@nestjs/common";
+import { ConsoleLogger } from "@nestjs/common";
+import { Difficulty, QueueMember } from "src/utils/types";
+import { getCurrentUnixTimestamp } from "src/utils/utils";
 
 export const USER_A_REQUEST: MatchRequest = {
     userId: 'user-a',
@@ -24,7 +26,7 @@ export const USER_C_MEMBER: QueueMember = {
     language: 'Python',
     topics: ['Algorithms', 'Graph Theory'],
     difficulty: 'medium' as Difficulty,
-    expiresAt: Math.floor(Date.now() / 1000) + 100 // arbitrary future timestamp
+    expiresAt: getCurrentUnixTimestamp() + 100 // arbitrary future timestamp
 };
 
 export const USER_D_MEMBER: QueueMember = {
@@ -32,7 +34,7 @@ export const USER_D_MEMBER: QueueMember = {
     language: 'Python',
     topics: ['Algorithms', 'Dynamic Programming', 'Searching'],
     difficulty: 'easy' as Difficulty,
-    expiresAt: Math.floor(Date.now() / 1000) + 100 // arbitrary future timestamp
+    expiresAt: getCurrentUnixTimestamp() + 100 // arbitrary future timestamp
 };
 
 export const USER_E_MEMBER: QueueMember = {
@@ -40,7 +42,7 @@ export const USER_E_MEMBER: QueueMember = {
     language: 'Python',
     topics: ['Algorithms', 'Sliding Window', 'Sorting'],
     difficulty: 'hard' as Difficulty,
-    expiresAt: Math.floor(Date.now() / 1000) + 100 // arbitrary future timestamp
+    expiresAt: getCurrentUnixTimestamp() + 100 // arbitrary future timestamp
 };
 
 export const USER_F_MEMBER: QueueMember = {
@@ -48,7 +50,7 @@ export const USER_F_MEMBER: QueueMember = {
     language: 'Python',
     topics: ['Trees', 'Recursion'],
     difficulty: 'medium' as Difficulty,
-    expiresAt: Math.floor(Date.now() / 1000) + 100 // arbitrary future timestamp
+    expiresAt: getCurrentUnixTimestamp() + 100 // arbitrary future timestamp
 };
 
 export const USER_G_MEMBER: QueueMember = {
@@ -56,7 +58,7 @@ export const USER_G_MEMBER: QueueMember = {
     language: 'Python',
     topics: ['Graphs'],
     difficulty: 'easy' as Difficulty,
-    expiresAt: Math.floor(Date.now() / 1000) + 100 // arbitrary future timestamp
+    expiresAt: getCurrentUnixTimestamp() + 100 // arbitrary future timestamp
 }
 
 const getQueueKey = (d: Difficulty) => `matching:queue:${d}`;

@@ -1,16 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import Redis from "ioredis";
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
-
-export interface QueueMember {
-    userId: string;
-    language: string;
-    topics: string[];
-    difficulty: Difficulty;
-    expiresAt: number; // Unix timestamp
-    requestId: string;
-}
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
