@@ -7,7 +7,9 @@ import { CollaborationModule } from './collaboration/collaboration.module';
   imports: [
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
-      autoSchemaFile: true,
+      autoSchemaFile: {
+        federation: 2,
+      },
       playground: true,
       introspection: true,
     }),
