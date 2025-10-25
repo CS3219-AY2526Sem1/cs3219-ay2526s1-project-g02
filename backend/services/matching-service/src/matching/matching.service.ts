@@ -3,7 +3,7 @@ import { Difficulty, QueueMember, RedisService } from 'src/redis/redis.service';
 import { MatchingGateway } from './matching.gateway';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from 'src/database/database.service';
-import { CheckService } from 'src/integrity-check/check.service';
+import { CheckService } from 'src/check/check.service';
 
 
 /* -------------------- Interfaces -------------------- */

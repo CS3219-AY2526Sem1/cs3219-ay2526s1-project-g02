@@ -5,7 +5,7 @@ import { MatchingGateway } from './matching.gateway';
 import { RedisModule } from 'src/redis/redis.module';
 import { TtlService } from './ttl.service';
 import { DatabaseModule } from 'src/database/database.module';
-import { CheckModule } from 'src/integrity-check/check.module';
+import { CheckModule } from 'src/check/check.module';
 
 @Module({
   imports: [RedisModule, DatabaseModule, CheckModule],

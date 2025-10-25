@@ -72,22 +72,31 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     /**
-     * Retrieves members whose timestamps are expired (i.e., less than or equal to maxScore).
+     * Atomically retrieves AND removes members whose timestamps are expired.
      * @param key The Redis key.
      * @param maxScore The maximum timestamp to check against.
-     * @returns An array of expired members as strings.
+     * @returns An array of expired members as JSON strings (payload).
      */
-    async getExpiredMembers(key: string, maxScore: number): Promise<string[]> {
-        return this.client.zrangebyscore(key, '-inf', maxScore);
-    }
+    async getAndRemoveExpiredMembers(key: string, maxScore: number): Promise<string[]> {
+        const pipeline = this.client.multi();
 
-    /**
-     * Removes members whose scores (timestamps) are expired.
-     * @param key The Redis key.
-     * @param maxScore The maximum TTL.
-     * @returns The number of members removed.
-     */
-    async removeExpiredMembers(key: string, maxScore: number): Promise<number> {
-        return this.client.zremrangebyscore(key, '-inf', maxScore);
+        // 1. Get members that are expired (i.e. score <= maxScore)
+        pipeline.zrangebyscore(key, '-inf', maxScore);
+        
+        // 2. Remove those members
+        pipeline.zremrangebyscore(key, '-inf', maxScore);
+
+        // 3. Execute both atomically
+        const results = await pipeline.exec();
+
+        // 4. Check results
+        if (!results || results[0][0] !== null) {
+            console.error('Redis Transaction Error during TTL cleanup:', results);
+            return [];
+        }
+
+        // 5. Extract expired members
+        const expiredMembers = results[0][1] as string[] | null;
+        return expiredMembers || [];
     }
 }
