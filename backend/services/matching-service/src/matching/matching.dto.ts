@@ -16,7 +16,7 @@ export class MatchRequestInput {
 }
 
 @ObjectType()
-export class MatchResult {
+export class MatchResultOutput {
     @Field()
     matchFound: boolean;
 
@@ -43,7 +43,7 @@ export class CancelMatchRequestInput {
 }
 
 @ObjectType()
-export class CancellationResult {
+export class CancellationResultOutput {
     @Field()
     success: boolean;
 

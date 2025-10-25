@@ -4,29 +4,10 @@ import { MatchingGateway } from './matching.gateway';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from 'src/database/database.service';
 import { CheckService } from 'src/check/check.service';
-import { CancellationResult } from './matching.dto';
+import { CancellationResultOutput } from './matching.dto';
 import { EventBusService } from 'src/event-bus/event-bus.service';
-import { Difficulty, QueueMember } from 'src/utils/types';
+import { Difficulty, MatchRequest, MatchResult, QueueMember } from 'src/utils/types';
 import { getCurrentUnixTimestamp } from 'src/utils/utils';
-
-
-/* -------------------- Interfaces -------------------- */
-export interface MatchRequest {
-    userId: string;
-    language: string;
-    topics: string[];
-    difficulty: Difficulty;
-    requestId?: string;
-}
-
-export interface MatchResult {
-    matchFound: boolean;
-    matchedUserId?: string;
-    queued: boolean;
-    queueKey?: string;
-    requestId?: string;
-    reason?: string;
-}
 
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
@@ -92,7 +73,7 @@ export class MatchingService {
         };
     }
 
-    public async cancelMatchRequest(requestId: string): Promise<CancellationResult> {
+    public async cancelMatchRequest(requestId: string): Promise<CancellationResultOutput> {
         this.logger.log(`Attempting to cancel match request with ID ${requestId}`);
         
         // Step 1: Search all queues for the request
