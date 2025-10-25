@@ -144,7 +144,7 @@ export class MatchingService {
         const { userId, language, difficulty, topics } = request;
         const expiresAt = new Date(Date.now() + QUEUE_TTL_SECONDS * 1000).toISOString();
 
-        this.logger.debug(`Recording new match request for user ${userId}`);
+        this.logger.log(`Recording new match request for user ${userId}`);
 
         const { data, error } = await this.supabase
             .from('match_requests')
@@ -172,7 +172,7 @@ export class MatchingService {
         targetDifficulty: Difficulty
     ): Promise<MatchResult> {
         const key = this.getQueueKey(targetDifficulty);
-        this.logger.debug(`Searching queue ${key} for user ${user.userId}`);
+        this.logger.log(`Searching queue ${key} for user ${user.userId}`);
 
         const candidateStrings = await this.redisService.peekCandidates(key, CANDIDATE_PEEK_COUNT);
 
@@ -202,6 +202,7 @@ export class MatchingService {
             }
 
             // Match found!
+            this.logger.log(`Match found in queue ${key} between users ${user.userId} and ${potentialCandidate.userId}`);
 
             // (a) Finalise match by removing matched user from queue
             await this.finaliseMatch(user, potentialCandidate);
@@ -257,6 +258,8 @@ export class MatchingService {
         }
 
         // Step 2: Record the finalised match in database
+        this.logger.log(`Recording finalised match in DB between ${user.userId} and ${matchedCandidate.userId}`);
+
         const {data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
@@ -282,6 +285,7 @@ export class MatchingService {
         }
 
         // Step 3: Notify both users via WebSocket
+        this.logger.log(`Notifying users ${user.userId} and ${matchedCandidate.userId} of match via WebSocket`);
         this.matchingGateway.notifyMatchFound(
             user.userId,
             matchedCandidate.userId,
@@ -289,6 +293,7 @@ export class MatchingService {
         )
 
         // Step 4: Publish to Event Bus (to notify Collaboration Service)
+        this.logger.log(`Publishing match found event for match ID ${matchData!.id} to Event Bus`);
         const user1TopicsSet = new Set(user.topics);
         const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
         this.eventBusService.publishMatchFound({

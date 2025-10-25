@@ -12,7 +12,7 @@ export class CheckService {
     }
 
     async isUserInActiveMatch(userId: string): Promise<boolean> {
-        this.logger.debug(`Checking active match for user: ${userId}`);
+        this.logger.log(`Checking active match for user: ${userId}`);
     
         try {
             const { count, error } = await this.supabase

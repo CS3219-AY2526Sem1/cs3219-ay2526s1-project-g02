@@ -26,7 +26,7 @@ export class TtlService {
     @Cron(CronExpression.EVERY_MINUTE)
     async handleCleanup() {
         const now = getCurrentUnixTimestamp(); // current time in seconds
-        this.logger.debug(`Running TTL cleanup at ${new Date().toISOString()} | Max Score: ${now}`);
+        this.logger.log(`Running TTL cleanup at ${new Date().toISOString()} | Max Score: ${now}`);
 
         for (const key of this.queueKeys) {
             try {

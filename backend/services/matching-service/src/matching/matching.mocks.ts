@@ -1,11 +1,8 @@
 import { Difficulty, QueueMember } from "src/utils/types";
+import { getQueueKey } from "src/utils/utils";
 
 // Internal map to hold state of 3 queues (easy, medium, hard)
 const mockQueueData: Map<string, string[]> = new Map();
-
-const getMockQueueKey = (difficulty: Difficulty): string => {
-    return `matching:queue:${difficulty}`;
-};
 
 export const mockMatchingGateway = {
     notifyMatchFound: jest.fn(),
@@ -21,7 +18,7 @@ export const mockRedisService = {
 
     // manually set queue
     setQueueState: (difficulty: Difficulty, members: QueueMember[]) => {
-        const key = getMockQueueKey(difficulty);
+        const key = getQueueKey(difficulty);
         mockQueueData.set(key, members.map(m => JSON.stringify(m)));
     },
 
@@ -47,7 +44,34 @@ export const mockRedisService = {
         return initialLength - finalLength;
     }),
 
-    removeExpiredMembers: jest.fn(async (key: string, maxScore: number) => {
-        return 0;
+    getAndRemoveExpiredMembers: jest.fn(async (key: string, maxScore: number) => {
+        if (mockQueueData.has(key)) {
+            const members = mockQueueData.get(key)!;
+            mockQueueData.delete(key);
+            return [];
+        }
+        return [];
     })
-}
+};
+
+export const mockCheckService = {
+    isUserInActiveMatch: jest.fn(),
+};
+
+export const mockEventBusService = {
+    publishMatchFound: jest.fn(),
+};
+
+export const mockSupabaseClient = {
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+};
+
+export const mockDatabaseService = {
+    getClient: jest.fn(() => mockSupabaseClient),
+};
