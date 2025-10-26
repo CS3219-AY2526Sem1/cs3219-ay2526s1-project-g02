@@ -1,11 +1,17 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { MatchingService, MatchRequest } from './matching.service';
+import { Args, Mutation, Resolver, Query } from '@nestjs/graphql';
+import { MatchingService } from './matching.service';
 import { CancellationResultOutput, CancelMatchRequestInput, MatchRequestInput, MatchResultOutput } from './matching.dto';
+import { MatchRequest } from 'src/utils/types';
 
 /* This resolver is to resolve GraphQL requests from the client, NOT WebSocket (see matching.gateway.ts for that) */
-@Resolver(() => MatchResultOutput)
+@Resolver()
 export class MatchingResolver {
     constructor(private readonly matchingService: MatchingService) {}
+
+    @Query(() => String)
+    healthCheck(): string {
+        return 'Matching Service is healthy';
+    }
 
     // Client requests a match
     @Mutation(() => MatchResultOutput)
@@ -15,7 +21,7 @@ export class MatchingResolver {
         return this.matchingService.findMatchOrQueueUser(requestInput as MatchRequest);
     }
 
-    // Client cancels an ongiong match request
+    // Client cancels an ongoing match request
     @Mutation(() => CancellationResultOutput)
     async cancelMatchRequest(
         @Args('request') cancelInput: CancelMatchRequestInput,

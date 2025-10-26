@@ -5,6 +5,12 @@ import { DatabaseService } from "src/database/database.service";
 import { RedisService } from "src/redis/redis.service";
 import { QueueMember } from "src/utils/types";
 import { getCurrentUnixTimestamp } from "src/utils/utils";
+import { MatchingGateway } from "./matching.gateway";
+
+interface ExpiredRequestData {
+    userId: string;
+    requestId: string;
+}
 
 @Injectable()
 export class TtlService {
@@ -19,6 +25,7 @@ export class TtlService {
     constructor(
         private readonly redisService: RedisService,
         private readonly dbService: DatabaseService,
+        private readonly matchingGateway: MatchingGateway,
     ) {
         this.supabase = this.dbService.getClient();
     }
@@ -35,12 +42,17 @@ export class TtlService {
                 if (expiredMemberStrings.length === 0) continue;
                 this.logger.log(`[${key}] Removed ${expiredMemberStrings.length} expired members from queue.`);
 
-                // 2. Extract Request IDs from expired members (to update DB later)
+                // 2. Extract Request IDs from expired members (to update DB later and notify user via WS)
                 const expiredRequestIds: string[] = [];
+                const expiredMemberData: ExpiredRequestData[] = [];
                 for (const memberStr of expiredMemberStrings) {
                     try {
                         const member = JSON.parse(memberStr) as QueueMember;
                         expiredRequestIds.push(member.requestId);
+                        expiredMemberData.push({
+                            userId: member.userId,
+                            requestId: member.requestId,
+                        });
                     } catch (e) {
                         this.logger.error(`Failed to parse expired member JSON: ${memberStr}`, e);
                     }
@@ -57,6 +69,11 @@ export class TtlService {
                     this.logger.error(`Failed to update DB for expired requests: ${error.message}`);
                 } else {
                     this.logger.log(`Updated ${expiredRequestIds.length} DB records to 'expired' for queue ${key}.`);
+                }
+
+                // 4. Notify user about expiration via WebSocket (if connected)
+                for (const { userId, requestId } of expiredMemberData) {
+                    this.matchingGateway.notifyRequestExpired(userId, requestId);
                 }
 
             } catch (error) {

@@ -1,9 +1,9 @@
 import {
     ConnectedSocket,
     OnGatewayConnection,
-  OnGatewayDisconnect,
-  WebSocketGateway,
-  WebSocketServer,
+    OnGatewayDisconnect,
+    WebSocketGateway,
+    WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
@@ -44,8 +44,7 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
         if (disconnectedUserId) {
             this.activeUsers.delete(disconnectedUserId);
             this.logger.log(
-                `User ${disconnectedUserId} disconnected. \
-                Total active: ${this.activeUsers.size}`);
+                `User ${disconnectedUserId} disconnected. Total active: ${this.activeUsers.size}`);
         }
     }
 
@@ -65,17 +64,30 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
         if (userASocket) {
             userASocket.emit('matchFound', payloadA);
-            this.logger.verbose(`Notified user ${userAId} of match with ${userBId}`);
+            this.logger.log(`Notified user ${userAId} of match with ${userBId}`);
         } else {
             this.logger.warn(`User A (${userAId}) not found in active connections for notification.`);
         }
         
         if (userBSocket) {
             userBSocket.emit('matchFound', payloadB);
-            this.logger.verbose(`Notified user ${userBId} of match with ${userAId}`);
+            this.logger.log(`Notified user ${userBId} of match with ${userAId}`);
         } else {
             this.logger.warn(`User B (${userBId}) not found in active connections for notification.`);
         }
+    }
 
+    notifyRequestExpired(userId: string, requestId: string): void {
+        const userSocket = this.activeUsers.get(userId);
+
+        if (userSocket) {
+            userSocket.emit('requestExpired', { 
+                requestId: requestId,
+                message: 'Your match request has expired. Please try again.',
+            });
+            this.logger.log(`Notified user ${userId} of expired request ${requestId}`);
+        } else {
+            this.logger.warn(`User ${userId} not found in active connections for expiration notification.`);
+        }
     }
 }

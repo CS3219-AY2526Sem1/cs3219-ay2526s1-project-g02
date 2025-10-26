@@ -212,8 +212,8 @@ CREATE TABLE match_requests (
   preferred_language VARCHAR(50) NOT NULL,
   preferred_difficulty VARCHAR(50) NOT NULL,
   preferred_topics JSONB NOT NULL,
-  status VARCHAR(50) DEFAULT ‘pending’ NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+  status VARCHAR(50) DEFAULT 'pending' NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 ```

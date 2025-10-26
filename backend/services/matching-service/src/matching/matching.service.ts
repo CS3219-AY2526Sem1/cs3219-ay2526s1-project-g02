@@ -12,7 +12,7 @@ import { getCurrentUnixTimestamp } from 'src/utils/utils';
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
 const CANDIDATE_PEEK_COUNT = 50;
-const QUEUE_TTL_SECONDS = 300; // 5 minutes
+const QUEUE_TTL_SECONDS = 120; // 2 minutes for debugging. TODO: CHANGE TO 5 MINUTES
 
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
@@ -237,7 +237,7 @@ export class MatchingService {
 
         const memberString = JSON.stringify(queueMember);
         await this.redisService.addUserToQueue(key, expireTime, memberString);
-        this.logger.log(`User ${user.userId} queued in ${key}. DB ID: ${user.requestId}`);
+        this.logger.log(`User ${user.userId} queued in ${key}. Request ID: ${user.requestId}`);
     }
 
     // Cleanup - removes matched candidate from queue 

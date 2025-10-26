@@ -20,10 +20,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
 
     async onModuleInit() {
-        this.logger.log("MatchingService: Database client connected.");
+        console.log("Connected to Supabase");
     }
 
     async onModuleDestroy() {
-        this.logger.log("MatchingService: Database client disconnected.");
+        console.log("Disconnected from Supabase");
     }
 }
