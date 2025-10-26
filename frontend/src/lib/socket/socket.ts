@@ -22,15 +22,15 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_MATCHING_WS_URL || 'http://localhost:
 const SOCKET_NAMESPACE = process.env.NEXT_PUBLIC_MATCHING_WS_NAMESPACE || 'match';
 const FULL_SOCKET_URL = `${SOCKET_URL}/${SOCKET_NAMESPACE}`;
 
-export const socket: Socket<ServerToClientEvents> = io(FULL_SOCKET_URL, {
+export const matchingSocket: Socket<ServerToClientEvents> = io(FULL_SOCKET_URL, {
     autoConnect: false,
     // TODO: Add auth logic here if needed
 });
 
-socket.on("connect", () => {
-    console.log("Connected to matching service WebSocket:", socket.id);
+matchingSocket.on("connect", () => {
+    console.log("Connected to matching service WebSocket:", matchingSocket.id);
 });
 
-socket.on("disconnect", () => {
+matchingSocket.on("disconnect", () => {
     console.log("Disconnected from matching service WebSocket.");
 });
