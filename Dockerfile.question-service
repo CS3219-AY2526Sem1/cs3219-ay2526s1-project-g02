@@ -52,6 +52,9 @@ COPY --from=service-builder /app/backend/services/question-service/dist ./dist
 COPY --from=service-builder /app/backend/services/question-service/package*.json ./
 COPY --from=service-builder /app/backend/services/question-service/node_modules ./node_modules
 
+# Copy environment file
+COPY backend/services/question-service/.env* ./
+
 EXPOSE 4002
 
 ENV PORT=4002
