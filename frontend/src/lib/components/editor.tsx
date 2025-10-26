@@ -5,14 +5,13 @@ import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { MonacoBinding } from "y-monaco";
 import type { editor } from "monaco-editor";
-
+import { WebSocketService } from "@/lib/services/web-socket-service";
 interface EditorProps {
   height: string;
+  webSocketService: WebSocketService;
   width?: string;
   defaultLanguage: string;
   defaultValue?: string;
-  sessionId: string;
-  wsUrl?: string;
 }
 
 export default function Editor({
@@ -20,60 +19,26 @@ export default function Editor({
   width = "100%",
   defaultLanguage = "javascript",
   defaultValue = "",
-  sessionId,
-  wsUrl = "ws://localhost:1234",
+  webSocketService,
 }: EditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const [provider, setProvider] = useState<WebsocketProvider | null>(null);
   const [binding, setBinding] = useState<MonacoBinding | null>(null);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
+    if (!editor) throw new Error("Editor not found");
     editorRef.current = editor;
-
-    // Create Y.js document
-    const ydoc = new Y.Doc();
-    const ytext = ydoc.getText("monaco");
-
-    // Connect to Y.js WebSocket server
-    const wsProvider = new WebsocketProvider(wsUrl, sessionId, ydoc, {
-      connect: true,
-    });
-
-    wsProvider.on("status", (event: { status: string }) => {
-      console.log("WebSocket status:", event.status);
-    });
-
-    wsProvider.on("sync", (isSynced: boolean) => {
-      console.log("Document synced:", isSynced);
-    });
-
-    wsProvider.on("connection-error", (event: Event) => {
-      console.error("WebSocket connection error:", event);
-    });
-
-    wsProvider.on("connection-close", () => {
-      console.log("WebSocket connection closed");
-    });
-
-    // Create Monaco binding
-    const monacoBinding = new MonacoBinding(
-      ytext,
-      editor.getModel()!,
-      new Set([editor]),
-      wsProvider.awareness
-    );
-
-    setProvider(wsProvider);
-    setBinding(monacoBinding);
+    if (!webSocketService) throw new Error("WebSocket service not provided");
+    webSocketService?.connect();
+    const _binding = webSocketService?.bindToEditor(editor);
+    if (!_binding) throw new Error("Failed to bind to editor");
+    setBinding(_binding);
   };
 
   useEffect(() => {
     return () => {
-      // Cleanup on unmount
       binding?.destroy();
-      provider?.destroy();
     };
-  }, [binding, provider]);
+  }, [binding, webSocketService]);
 
   return (
     <MonacoEditor
