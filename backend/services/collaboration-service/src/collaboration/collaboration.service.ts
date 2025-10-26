@@ -27,7 +27,7 @@ export class CollaborationService {
       .eq('id', sessionId)
       .single();
 
-    if (error) throw new Error(`Failed to fetch session: {error.message}`);
+    if (error) throw new Error(`Failed to fetch session: ${error.message}`);
     return data;
   }
 

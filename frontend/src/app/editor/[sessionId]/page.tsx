@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 
 export default function EditorPage() {
   const { sessionId: sessionIdParam } = useParams();
-  // In a real app, this would come from the URL or route params
   const [sessionId] = useState(sessionIdParam as string);
 
   return (
