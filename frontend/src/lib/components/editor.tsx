@@ -47,6 +47,14 @@ export default function Editor({
       console.log("Document synced:", isSynced);
     });
 
+    wsProvider.on("connection-error", (event: Event) => {
+      console.error("WebSocket connection error:", event);
+    });
+
+    wsProvider.on("connection-close", () => {
+      console.log("WebSocket connection closed");
+    });
+
     // Create Monaco binding
     const monacoBinding = new MonacoBinding(
       ytext,

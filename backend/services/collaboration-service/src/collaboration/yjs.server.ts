@@ -1,21 +1,20 @@
 import { WebSocketServer } from 'ws';
 import * as Y from 'yjs';
-import { setupWSConnection } from 'y-websocket/bin/utils';
+import { WebsocketProvider } from 'y-websocket';
 
 export class YjsServer {
   private wss: WebSocketServer;
   private docs: Map<string, Y.Doc> = new Map();
 
-  constructor(port: number = 1234) {
+  constructor(port: number) {
     this.wss = new WebSocketServer({ port });
     console.log(`Y.js WebSocket server running on port ${port}`);
 
     this.wss.on('connection', (ws, req) => {
       console.log('New Y.js WebSocket connection');
-      setupWSConnection(ws, req, {
-        gc: true,
-        // Callback when document is created or retrieved
-        docName: this.getDocName(req.url),
+      const doc = new Y.Doc();
+      new WebsocketProvider('ws://localhost:1234', this.getDocName(req.url), doc, {
+        connect: true,
       });
     });
 
