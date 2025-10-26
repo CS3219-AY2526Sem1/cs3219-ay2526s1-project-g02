@@ -1,17 +1,48 @@
-import { Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { UsersService } from "./users.service";
+import { RegisterDto } from "./dto/register.dto";
+import { LogInDto } from "./dto/logIn.dto";
+import { SignOutDto } from "./dto/signOut.dto";
+import { ResetPasswordDto } from "./dto/resetPassword.dto";
+import { UpdatePasswordDto } from "./dto/updatePassword.dto";
 
 @Controller("users")
 export class UsersController {
-  //Singleton pattern of the supabase client
-  constructor(private readonly supabaseService: SupabaseClient) {}
+  constructor(private readonly userService: UsersService) {}
 
-  //   @Post()
-  //   create(): string {
-  //     return "This action adds a new cat";
-  //   }
-  //   @Get()
-  //   findAll(): string {
-  //     return "This action returns all cats";
-  //   }
+  @Post("register")
+  async register(@Body() dto: RegisterDto) {
+    return this.userService.register(dto.email, dto.username, dto.password);
+  }
+
+  @Get("register/email/check")
+  async isEmailTaken(@Query("email") email: string) {
+    return this.userService.isEmailTaken(email);
+  }
+
+  @Get("register/username/check")
+  async isUsernameTaken(@Query("username") username: string) {
+    return this.userService.isUsernameTaken(username);
+  }
+
+  @Post("login")
+  async logIn(@Body() dto: LogInDto) {
+    return this.userService.logIn(dto.email, dto.password);
+  }
+
+  @Post("signout")
+  async signout(@Body() dto: SignOutDto) {
+    return this.userService.signOut();
+  }
+
+  @Post("resetpasswordlink")
+  async resetPasswordLink(@Body() dto: ResetPasswordDto) {
+    return this.userService.resetPasswordLink(dto.email);
+  }
+
+  @Post("updatepassword")
+  async updatePassword(@Body() dto: UpdatePasswordDto) {
+    return this.userService.updatePassword(dto.password);
+  }
 }

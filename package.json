@@ -12,19 +12,18 @@
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run start:dev --workspace=backend",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:user": "npm run start:dev --workspace=@noclue/user-service",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
-    "build": "npm run build:common && npm run build:frontend && npm run build:backend",
-    "build:common": "npm run build --workspace=common",
-    "start:frontend": "npm run start --workspace=frontend",
-    "start:backend": "npm run start:prod --workspace=backend",
-    "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@nestjs/testing": "^10.4.20",
+    "@types/jest": "^30.0.0",
+    "concurrently": "^8.2.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5"
   },
   "engines": {
     "node": ">=20.11.0",
