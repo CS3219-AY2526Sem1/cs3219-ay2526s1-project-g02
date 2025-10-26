@@ -12,3 +12,12 @@ export const FIND_MATCH_MUTATION = gql`
         }
     }
 `;
+
+export const CANCEL_MATCH_MUTATION = gql`
+    mutation CancelMatch($input: CancelMatchRequestInput!) {
+        cancelMatchRequest(request: $input) {
+            success
+            reason
+        }
+    }
+`;

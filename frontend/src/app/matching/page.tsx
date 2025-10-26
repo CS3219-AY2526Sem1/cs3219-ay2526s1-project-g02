@@ -1,10 +1,10 @@
 'use client';
 
 import { PageHeader, PageLayout } from "@/components/layout";
-import { FIND_MATCH_MUTATION } from "@/lib/graphql/matching-mutations";
+import { CANCEL_MATCH_MUTATION, FIND_MATCH_MUTATION } from "@/lib/graphql/matching-mutations";
 import { MatchFoundData, matchingSocket, RequestExpiredData } from "@/lib/socket/socket";
 import { useMutation } from "@apollo/client";
-import { MatchRequestInput, MatchResultOutput } from "@noclue/common";
+import { CancelMatchRequestInput, MatchRequestInput, MatchResultOutput } from "@noclue/common";
 import { useEffect, useState } from "react";
 
 type MatchStatus = 
@@ -23,13 +23,18 @@ export default function MatchingPage() {
 
     const [socketStatus, setSocketStatus] = useState<'connected' | 'disconnected'>('disconnected');
 
-    // 1. Defining the GraphQL Mutation Hook (to be used below)
+    // 1a. Defining the GraphQL Mutation for findMatch (to be used below)
     const [findMatch, { loading, error }] = useMutation(FIND_MATCH_MUTATION, {
         onCompleted(data) {
             const result: MatchResultOutput = data.findMatch;
             setMatchResult(result);
-            if (result.matchFound) setStatus('MATCH_FOUND');
-            else if (result.queued) setStatus('QUEUED');
+            if (result.matchFound) {
+                setStatus('MATCH_FOUND')
+                console.log('Match found immediately:', result);
+            } else if (result.queued) {
+                setStatus('QUEUED');
+                console.log('No immediate match, queued for matching:', result);
+            }
         },
         onError(err) {
             setStatus('ERROR');
@@ -37,7 +42,25 @@ export default function MatchingPage() {
         }
     })
 
-    // 2. Function to execute the mutation
+    // 1b. Defining the GraphQL Mutation for cancelMatchRequest (to be used below)
+    const [cancelMatch, { loading: canceling, error: cancelError }] = useMutation(CANCEL_MATCH_MUTATION, {
+        onCompleted(data) {
+            const result = data.cancelMatchRequest;
+            if (result.success) {
+                setStatus('CANCELLED');
+                console.log('Match request cancelled successfully');
+                // TODO: Notify user via UI
+            } else {
+                console.error('Failed to cancel match request:', result.message);
+                // TODO: Notify user via UI
+            }
+        },
+        onError(err) {
+            console.error("Error during cancelMatchRequest mutation:", err);
+        }
+    })
+
+    // 2a. Function to execute the findMatch mutation
     const initiateMatch = (input: MatchRequestInput) => {
         if (loading) return; // Prevent multiple requests
 
@@ -47,7 +70,13 @@ export default function MatchingPage() {
         findMatch({ variables: { input } });
     };
 
-    // 3. Upon 'Find Match' button press
+    // 2b. Function to execute the cancelMatchRequest mutation
+    const cancelMatchRequest = (input: CancelMatchRequestInput) => {
+        if (canceling) return; // Prevent multiple requests
+        cancelMatch({ variables: { input } });
+    }
+
+    // 3a. Upon 'Find Match' button press
     // TODO: Connect to button
     const handleStartMatch = () => {
         // TODO: Replace with form data
@@ -57,8 +86,18 @@ export default function MatchingPage() {
             topics: ['Algorithms', 'Data Structures'],
             difficulty: 'medium',
         };
-
         initiateMatch(dummyInput);
+    }
+
+    // 3b. Upon 'Cancel Match' button press
+    // TODO: Connect to button
+    const handleCancelMatch = () => { 
+        const requestId = matchResult?.requestId;
+        if (status !== 'QUEUED' || !requestId) {
+            console.warn("No active match request to cancel.");
+            return;
+        }
+        cancelMatchRequest({ requestId });
     }
 
     // 4. Socket.IO connection and Listener Hook
