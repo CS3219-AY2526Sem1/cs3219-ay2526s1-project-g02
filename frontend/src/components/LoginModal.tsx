@@ -26,7 +26,7 @@ export default function LoginModal() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Login failed");
+        setError("Invalid email or password");
         return;
       }
 
@@ -37,15 +37,12 @@ export default function LoginModal() {
       });
 
       if (error) {
-        alert(error.message || "Failed to set session");
+        setError("Internal server error");
         return;
       }
 
       if (res.ok) {
         router.push("/");
-      } else {
-        // Handle login error
-        setError("Invalid email or password");
       }
     } catch (error) {
       console.error("An error occurred during login:", error);

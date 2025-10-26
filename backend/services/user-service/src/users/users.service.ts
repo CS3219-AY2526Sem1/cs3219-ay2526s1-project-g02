@@ -1,6 +1,6 @@
-import { Inject, Injectable, Res } from "@nestjs/common";
-import { Response } from "express";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { Inject, Injectable, Req, Res } from "@nestjs/common";
+import { Request } from "express";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE, SUPABASE_ADMIN } from "../supabase/supabase.module";
 
 @Injectable()
@@ -32,7 +32,6 @@ export class UsersService {
       .insert({ id: userId, email: email, username: username })
       .select();
 
-    console.log("USER DATA", userData, "USER ERROR", userError);
     if (userError) {
       await this.supabaseAdmin.auth.admin.deleteUser(userId as string);
     }
@@ -43,6 +42,7 @@ export class UsersService {
       email: email,
       password: password,
     });
+    console.log("LOGIN DATA:", data, "LOGIN ERROR:", error);
 
     if (error) {
       throw new Error(error.message);
@@ -55,8 +55,19 @@ export class UsersService {
     };
   }
 
-  async signOut() {
-    const { error } = await this.supabase.auth.signOut();
+  async signOut(access_token: string) {
+    try {
+      // Supabase Admin API - signOut requires access token
+      const { error } = await this.supabaseAdmin.auth.admin.signOut(
+        access_token
+      );
+      if (error) throw error;
+
+      return { message: "User logged out successfully" };
+    } catch (error) {
+      console.error(error);
+      throw new Error("Logout failed");
+    }
   }
 
   async resetPasswordLink(email: string) {
@@ -71,9 +82,27 @@ export class UsersService {
     }
   }
 
-  async updatePassword(password: string) {
+  async updatePassword(password: string, req: Request) {
     try {
-      await this.supabase.auth.updateUser({ password: password });
+      const authHeader = req.headers.authorization as string | undefined;
+      const accessToken = authHeader?.split(" ")[1];
+      console.log("ACCESS TOKEN:", accessToken);
+
+      const supabaseInstance = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        }
+      );
+
+      await supabaseInstance.auth.updateUser({ password: password });
+      console.log("Password updated successfully");
+
       return { message: "Password updated successfully" };
     } catch (error) {
       console.error("Error updating password:", error);

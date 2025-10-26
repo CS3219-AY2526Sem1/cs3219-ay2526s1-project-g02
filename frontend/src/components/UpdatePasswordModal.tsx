@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function UpdatePasswordModal() {
   const [password, setPassword] = useState("");
@@ -32,17 +33,11 @@ export default function UpdatePasswordModal() {
   async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:4001/users/updatepassword", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password }),
+      const { data, error } = await supabase.auth.updateUser({
+        password: password,
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (!error) {
         router.push("/update-password-success");
       }
     } catch (e) {

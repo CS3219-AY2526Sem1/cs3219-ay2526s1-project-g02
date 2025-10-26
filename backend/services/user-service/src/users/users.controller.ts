@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { Body, Controller, Get, Post, Query, Req } from "@nestjs/common";
+import { Request } from "express";
 import { UsersService } from "./users.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LogInDto } from "./dto/logIn.dto";
@@ -33,7 +33,7 @@ export class UsersController {
 
   @Post("signout")
   async signout(@Body() dto: SignOutDto) {
-    return this.userService.signOut();
+    return this.userService.signOut(dto.access_token);
   }
 
   @Post("resetpasswordlink")
@@ -42,7 +42,10 @@ export class UsersController {
   }
 
   @Post("updatepassword")
-  async updatePassword(@Body() dto: UpdatePasswordDto) {
-    return this.userService.updatePassword(dto.password);
+  async updatePassword(@Req() req: Request, @Body() dto: UpdatePasswordDto) {
+    console.log("Request headers:", req.headers);
+    console.log("Request body:", req.body);
+
+    return this.userService.updatePassword(dto.password, req);
   }
 }
