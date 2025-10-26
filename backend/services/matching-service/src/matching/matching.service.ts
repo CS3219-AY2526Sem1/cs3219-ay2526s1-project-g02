@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
 import { MatchingGateway } from './matching.gateway';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -9,6 +9,11 @@ import { EventBusService } from 'src/event-bus/event-bus.service';
 import { Difficulty, MatchRequest, MatchResult, QueueMember } from 'src/utils/types';
 import { getCurrentUnixTimestamp } from 'src/utils/utils';
 
+/* -------------------- Interfaces -------------------- */
+interface MatchEndedPayload {
+    matchId: string;
+}
+
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
 const CANDIDATE_PEEK_COUNT = 50;
@@ -16,7 +21,7 @@ const QUEUE_TTL_SECONDS = 120; // 2 minutes for debugging. TODO: CHANGE TO 5 MIN
 
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
-export class MatchingService {
+export class MatchingService implements OnModuleInit {
 
     private readonly logger = new Logger(MatchingService.name);
     private readonly supabase: SupabaseClient;
@@ -135,6 +140,10 @@ export class MatchingService {
         this.logger.log(`Successfully cancelled match request with ID ${requestId}`);
         return { success: true };
 
+    }
+
+    onModuleInit() {
+        // TODO: Subscribe to Event Bus for (1) match ended events
     }
 
     /* -------------------- Private Helper Methods -------------------- */
@@ -304,6 +313,34 @@ export class MatchingService {
             language: user.language,
             commonTopics: commonTopics,
         })
+    }
+
+    // Handle match ended (upon Collab Service event)
+    // TODO: Use this with event bus subscription
+    private async handleMatchEnded(payload: MatchEndedPayload): Promise<void> {
+        const { matchId } = payload;
+        this.logger.log(`Handling match ended for match ID ${matchId}`);
+
+        try {
+            const { error, data } = await this.supabase
+            .from('matches')
+            .update({ status: 'ended', ended_at: new Date().toISOString() })
+            .eq('id', matchId)
+            .select();
+        
+            if (error) {
+                this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);
+                return;
+            }
+
+            if (data.length > 0) {
+                this.logger.log(`Match ID ${matchId} marked as ended.`);
+            } else {
+                this.logger.warn(`No match found with ID ${matchId} to mark as ended.`);
+            }
+        } catch (error) {
+            this.logger.error(`Fatal error while handling match ended for match ID ${matchId}: ${error.message}`);
+        }
     }
 
     // Helper method to get queue key based on difficulty
