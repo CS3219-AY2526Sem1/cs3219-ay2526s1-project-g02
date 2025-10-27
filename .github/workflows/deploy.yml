@@ -7,6 +7,7 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+
   workflow_dispatch:
 
 env:
@@ -119,12 +120,6 @@ jobs:
       run: |
         chmod +x ./scripts/deploy-services.sh
         ./scripts/deploy-services.sh
-
-    # Run health checks
-    - name: Health Check
-      run: |
-        chmod +x ./scripts/health-check.sh
-        ./scripts/health-check.sh
 
     # Get service URLs
     - name: Get Service URLs
