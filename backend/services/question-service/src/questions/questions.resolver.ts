@@ -5,32 +5,32 @@ import { QuestionsService, CreateQuestionInput, UpdateQuestionInput } from './qu
 export class QuestionsResolver {
   constructor(private readonly questionsService: QuestionsService) {}
 
-  @Query()
+  @Query(() => [String])
   async questions() {
     return this.questionsService.findAll();
   }
 
-  @Query()
+  @Query(() => String)
   async question(@Args('id') id: string) {
     return this.questionsService.findOne(id);
   }
 
-  @Query()
+  @Query(() => [String])
   async questionsByDifficulty(@Args('difficulty') difficulty: string) {
     return this.questionsService.findByDifficulty(difficulty);
   }
 
-  @Query()
+  @Query(() => [String])
   async questionsByCategory(@Args('category') category: string) {
     return this.questionsService.findByCategory(category);
   }
 
-  @Mutation()
+  @Mutation(() => String)
   async createQuestion(@Args('input') input: CreateQuestionInput) {
     return this.questionsService.create(input);
   }
 
-  @Mutation()
+  @Mutation(() => String)
   async updateQuestion(
     @Args('id') id: string,
     @Args('input') input: UpdateQuestionInput,
@@ -38,7 +38,7 @@ export class QuestionsResolver {
     return this.questionsService.update(id, input);
   }
 
-  @Mutation()
+  @Mutation(() => Boolean)
   async deleteQuestion(@Args('id') id: string) {
     return this.questionsService.delete(id);
   }

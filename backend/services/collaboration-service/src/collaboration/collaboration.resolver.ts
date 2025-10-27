@@ -5,17 +5,17 @@ import { CollaborationService } from './collaboration.service';
 export class CollaborationResolver {
   constructor(private readonly collaborationService: CollaborationService) {}
 
-  @Query()
+  @Query(() => String)
   async session(@Args('id') id: string) {
     return this.collaborationService.getSession(id);
   }
 
-  @Mutation()
+  @Mutation(() => String)
   async createSession(@Args('matchId') matchId: string) {
     return this.collaborationService.createSession(matchId);
   }
 
-  @Mutation()
+  @Mutation(() => Boolean)
   async endSession(@Args('sessionId') sessionId: string) {
     return this.collaborationService.endSession(sessionId);
   }

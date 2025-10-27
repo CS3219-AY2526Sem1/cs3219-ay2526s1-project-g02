@@ -5,27 +5,27 @@ import { UsersService, CreateUserInput, UpdateUserInput } from './users.service'
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
-  @Query()
+  @Query(() => [String])
   async users() {
     return this.usersService.findAll();
   }
 
-  @Query()
+  @Query(() => String)
   async user(@Args('id') id: string) {
     return this.usersService.findOne(id);
   }
 
-  @Query()
+  @Query(() => String)
   async userByEmail(@Args('email') email: string) {
     return this.usersService.findByEmail(email);
   }
 
-  @Mutation()
+  @Mutation(() => String)
   async createUser(@Args('input') input: CreateUserInput) {
     return this.usersService.create(input);
   }
 
-  @Mutation()
+  @Mutation(() => String)
   async updateUser(
     @Args('id') id: string,
     @Args('input') input: UpdateUserInput,
@@ -33,7 +33,7 @@ export class UsersResolver {
     return this.usersService.update(id, input);
   }
 
-  @Mutation()
+  @Mutation(() => Boolean)
   async deleteUser(@Args('id') id: string) {
     return this.usersService.delete(id);
   }
