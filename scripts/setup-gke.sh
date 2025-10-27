@@ -139,13 +139,13 @@ check_cluster_exists() {
             log_success "Cluster is already running"
 
             # Configure kubectl
-            configure_kubectl_context "$CLUSTER_NAME" "$CLUSTER_ZONE" "$CLUSTER_PROJECT_ID"
+            configure_kubectl_for_cluster
 
             # Ensure namespace exists
-            create_namespace_if_not_exists "$CLUSTER_NAMESPACE"
+            create_application_namespace
 
             # Display cluster info
-            display_cluster_info "$CLUSTER_NAME" "$CLUSTER_ZONE" "$CLUSTER_PROJECT_ID"
+            display_setup_summary
 
             log_success "Cluster setup complete (already existed)"
             exit 0
