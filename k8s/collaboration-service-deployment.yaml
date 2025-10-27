@@ -17,49 +17,54 @@ spec:
         app: collaboration-service
     spec:
       containers:
-      - name: collaboration-service
-        image: gcr.io/PROJECT_ID/collaboration-service:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 4004
-          name: http
-          protocol: TCP
-        envFrom:
-        - secretRef:
-            name: supabase-secrets
-        env:
-        - name: PORT
-          value: "4004"
-        - name: NODE_ENV
-          value: "production"
-        - name: USER_SERVICE_URL
-          value: "http://user-service.noclue-app.svc.cluster.local:4001"
-        - name: QUESTION_SERVICE_URL
-          value: "http://question-service.noclue-app.svc.cluster.local:4002"
-        - name: MATCHING_SERVICE_URL
-          value: "http://matching-service.noclue-app.svc.cluster.local:4003"
-        - name: CORS_ORIGIN
-          value: "https://noclue.com"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 4004
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 4004
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
+        - name: collaboration-service
+          image: gcr.io/PROJECT_ID/collaboration-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4004
+              name: http
+              protocol: TCP
+            - containerPort: 1234
+              name: yjs-ws
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: supabase-secrets
+          env:
+            - name: PORT
+              value: "4004"
+            - name: YJS_PORT
+              value: "1234"
+            - name: NODE_ENV
+              value: "production"
+            - name: USER_SERVICE_URL
+              value: "http://user-service.noclue-app.svc.cluster.local:4001"
+            - name: QUESTION_SERVICE_URL
+              value: "http://question-service.noclue-app.svc.cluster.local:4002"
+            - name: MATCHING_SERVICE_URL
+              value: "http://matching-service.noclue-app.svc.cluster.local:4003"
+            - name: CORS_ORIGIN
+              value: "https://noclue.com"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
