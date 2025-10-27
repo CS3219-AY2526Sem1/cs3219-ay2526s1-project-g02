@@ -5,7 +5,7 @@ COPY common/package*.json ./common/
 COPY common/tsconfig.json ./common/
 COPY common/src ./common/src
 WORKDIR /app/common
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
 # Stage 2: Build service
 FROM node:20-alpine AS service-builder
@@ -29,7 +29,7 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Copy common package
 COPY --from=common-builder /app/common /app/common
@@ -41,6 +41,6 @@ COPY --from=service-builder /app/backend/services/user-service/node_modules ./no
 
 EXPOSE 4001
 
-ENV PORT 4001
+ENV PORT=4001
 
 CMD ["node", "dist/main.js"]

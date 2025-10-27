@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: question-service
+  namespace: noclue-app
+  labels:
+    app: question-service
+spec:
+  type: ClusterIP
+  selector:
+    app: question-service
+  ports:
+  - port: 4002
+    targetPort: 4002
+    protocol: TCP
+    name: http

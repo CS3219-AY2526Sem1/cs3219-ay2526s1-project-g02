@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: gcr.io/PROJECT_ID/frontend:TAG
+        image: gcr.io/PROJECT_ID/frontend:latest
         ports:
         - containerPort: 3000
         env:
@@ -25,7 +25,17 @@ spec:
         - name: NODE_ENV
           value: "production"
         - name: NEXT_PUBLIC_GRAPHQL_URL
-          value: "http://backend-service/graphql"
+          value: "http://user-service.noclue-app.svc.cluster.local:4001/graphql"
+        - name: NEXT_PUBLIC_SUPABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_URL
+        - name: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_PUBLISHABLE_KEY
         resources:
           requests:
             memory: "256Mi"
