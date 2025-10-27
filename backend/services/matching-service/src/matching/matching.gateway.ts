@@ -8,7 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-@WebSocketGateway({ cors: true, namespace: 'match' })
+@WebSocketGateway({ namespace: 'match', cors: true })
 export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(MatchingGateway.name);
 
