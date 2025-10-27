@@ -17,7 +17,7 @@ export class MatchingService {
       .select()
       .single();
 
-    if (error) throw new Error(\`Failed to create match request: \${error.message}\`);
+    if (error) throw new Error(`Failed to create match request: ${error.message}`);
 
     this.matchingQueue.set(userId, data);
     return data;
@@ -32,9 +32,9 @@ export class MatchingService {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .or(\`user1_id.eq.\${userId},user2_id.eq.\${userId}\`);
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
 
-    if (error) throw new Error(\`Failed to fetch match history: \${error.message}\`);
+    if (error) throw new Error(`Failed to fetch match history: ${error.message}`);
     return data;
   }
 }

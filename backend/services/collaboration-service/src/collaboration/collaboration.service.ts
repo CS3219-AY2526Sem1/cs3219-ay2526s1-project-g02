@@ -15,7 +15,7 @@ export class CollaborationService {
       .select()
       .single();
 
-    if (error) throw new Error(\`Failed to create session: \${error.message}\`);
+    if (error) throw new Error(`Failed to create session: ${error.message}`);
     return data;
   }
 
@@ -26,7 +26,7 @@ export class CollaborationService {
       .eq('id', sessionId)
       .single();
 
-    if (error) throw new Error(\`Failed to fetch session: \${error.message}\`);
+    if (error) throw new Error(`Failed to fetch session: ${error.message}`);
     return data;
   }
 
@@ -38,7 +38,7 @@ export class CollaborationService {
       .select()
       .single();
 
-    if (error) throw new Error(\`Failed to update code: \${error.message}\`);
+    if (error) throw new Error(`Failed to update code: ${error.message}`);
     return data;
   }
 
@@ -50,7 +50,7 @@ export class CollaborationService {
       .select()
       .single();
 
-    if (error) throw new Error(\`Failed to end session: \${error.message}\`);
+    if (error) throw new Error(`Failed to end session: ${error.message}`);
     return data;
   }
 }

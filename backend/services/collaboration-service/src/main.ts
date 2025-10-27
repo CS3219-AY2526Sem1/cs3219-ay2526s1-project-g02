@@ -6,7 +6,7 @@ async function bootstrap() {
   app.enableCors({ origin: process.env.CORS_ORIGIN || '*', credentials: true });
   const port = process.env.PORT || 4004;
   await app.listen(port);
-  console.log(\`Collaboration Service is running on: http://localhost:\${port}\`);
+  console.log(`Collaboration Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();
