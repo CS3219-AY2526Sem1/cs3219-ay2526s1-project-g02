@@ -11,35 +11,35 @@ export class QuestionsResolver {
   }
 
   @Query(() => String)
-  async question(@Args('id') id: string) {
+  async question(@Args({ name: 'id', type: () => String }) id: string) {
     return this.questionsService.findOne(id);
   }
 
   @Query(() => [String])
-  async questionsByDifficulty(@Args('difficulty') difficulty: string) {
+  async questionsByDifficulty(@Args({ name: 'difficulty', type: () => String }) difficulty: string) {
     return this.questionsService.findByDifficulty(difficulty);
   }
 
   @Query(() => [String])
-  async questionsByCategory(@Args('category') category: string) {
+  async questionsByCategory(@Args({ name: 'category', type: () => String }) category: string) {
     return this.questionsService.findByCategory(category);
   }
 
   @Mutation(() => String)
-  async createQuestion(@Args('input') input: CreateQuestionInput) {
+  async createQuestion(@Args({ name: 'input', type: () => Object }) input: CreateQuestionInput) {
     return this.questionsService.create(input);
   }
 
   @Mutation(() => String)
   async updateQuestion(
-    @Args('id') id: string,
-    @Args('input') input: UpdateQuestionInput,
+    @Args({ name: 'id', type: () => String }) id: string,
+    @Args({ name: 'input', type: () => Object }) input: UpdateQuestionInput,
   ) {
     return this.questionsService.update(id, input);
   }
 
   @Mutation(() => Boolean)
-  async deleteQuestion(@Args('id') id: string) {
+  async deleteQuestion(@Args({ name: 'id', type: () => String }) id: string) {
     return this.questionsService.delete(id);
   }
 }

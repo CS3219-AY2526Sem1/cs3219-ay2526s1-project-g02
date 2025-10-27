@@ -6,12 +6,15 @@ export class MatchingResolver {
   constructor(private readonly matchingService: MatchingService) {}
 
   @Query(() => [String])
-  async matchHistory(@Args('userId') userId: string) {
+  async matchHistory(@Args({ name: 'userId', type: () => String }) userId: string) {
     return this.matchingService.getMatchHistory(userId);
   }
 
   @Mutation(() => String)
-  async requestMatch(@Args('userId') userId: string, @Args('preferences') preferences: any) {
+  async requestMatch(
+    @Args({ name: 'userId', type: () => String }) userId: string,
+    @Args({ name: 'preferences', type: () => Object }) preferences: any
+  ) {
     return this.matchingService.createMatchRequest(userId, preferences);
   }
 }

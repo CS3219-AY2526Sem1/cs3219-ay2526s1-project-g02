@@ -6,17 +6,17 @@ export class CollaborationResolver {
   constructor(private readonly collaborationService: CollaborationService) {}
 
   @Query(() => String)
-  async session(@Args('id') id: string) {
+  async session(@Args({ name: 'id', type: () => String }) id: string) {
     return this.collaborationService.getSession(id);
   }
 
   @Mutation(() => String)
-  async createSession(@Args('matchId') matchId: string) {
+  async createSession(@Args({ name: 'matchId', type: () => String }) matchId: string) {
     return this.collaborationService.createSession(matchId);
   }
 
   @Mutation(() => Boolean)
-  async endSession(@Args('sessionId') sessionId: string) {
+  async endSession(@Args({ name: 'sessionId', type: () => String }) sessionId: string) {
     return this.collaborationService.endSession(sessionId);
   }
 }

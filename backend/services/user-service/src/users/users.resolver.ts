@@ -11,30 +11,30 @@ export class UsersResolver {
   }
 
   @Query(() => String)
-  async user(@Args('id') id: string) {
+  async user(@Args({ name: 'id', type: () => String }) id: string) {
     return this.usersService.findOne(id);
   }
 
   @Query(() => String)
-  async userByEmail(@Args('email') email: string) {
+  async userByEmail(@Args({ name: 'email', type: () => String }) email: string) {
     return this.usersService.findByEmail(email);
   }
 
   @Mutation(() => String)
-  async createUser(@Args('input') input: CreateUserInput) {
+  async createUser(@Args({ name: 'input', type: () => Object }) input: CreateUserInput) {
     return this.usersService.create(input);
   }
 
   @Mutation(() => String)
   async updateUser(
-    @Args('id') id: string,
-    @Args('input') input: UpdateUserInput,
+    @Args({ name: 'id', type: () => String }) id: string,
+    @Args({ name: 'input', type: () => Object }) input: UpdateUserInput,
   ) {
     return this.usersService.update(id, input);
   }
 
   @Mutation(() => Boolean)
-  async deleteUser(@Args('id') id: string) {
+  async deleteUser(@Args({ name: 'id', type: () => String }) id: string) {
     return this.usersService.delete(id);
   }
 }
