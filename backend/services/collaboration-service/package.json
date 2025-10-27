@@ -27,8 +27,7 @@
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27",
     "dotenv": "^16.4.7",
-    "@apollo/subgraph": "^2.11.0",
-    "@y/websocket-server": "^1.0.0"
+    "@apollo/subgraph": "^2.11.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
