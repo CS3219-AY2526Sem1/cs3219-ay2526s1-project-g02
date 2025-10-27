@@ -27,17 +27,17 @@ cluster:
 # Node Pool Configuration
 nodePool:
   # Initial node count
-  initialNodeCount: 1
+  initialNodeCount: 4
 
   # Machine type
-  machineType: e2-small
+  machineType: e2-medium
 
   # Disk size in GB
   diskSizeGb: 30
 
   # Autoscaling configuration
   minNodes: 1
-  maxNodes: 1
+  maxNodes: 4
 
   # Use preemptible nodes (set to true for cost savings)
   preemptible: false

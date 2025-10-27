@@ -7,7 +7,7 @@ metadata:
     app: user-service
     service: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: user-service
@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: gcr.io/PROJECT_ID/user-service:latest
+        image: gcr.io/noclue-476404/user-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 4001
@@ -32,6 +32,11 @@ spec:
           value: "4001"
         - name: NODE_ENV
           value: "production"
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_SECRET_KEY
         - name: QUESTION_SERVICE_URL
           value: "http://question-service.noclue-app.svc.cluster.local:4002"
         - name: MATCHING_SERVICE_URL
@@ -42,11 +47,11 @@ spec:
           value: "https://noclue.com"
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "128Mi"
+            cpu: "100m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /health

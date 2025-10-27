@@ -27,7 +27,7 @@ COPY frontend/.env* ./frontend/
 
 # Install dependencies and build
 WORKDIR /app/frontend
-RUN npm ci
+RUN npm install
 RUN npm run build
 
 # Stage 3: Production
@@ -37,12 +37,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy necessary files from builder
+# The standalone output includes the full directory structure
 COPY --from=frontend-builder /app/frontend/.next/standalone ./
-COPY --from=frontend-builder /app/frontend/.next/static ./.next/static
-COPY --from=frontend-builder /app/frontend/public ./public
+COPY --from=frontend-builder /app/frontend/.next/static ./frontend/.next/static
+COPY --from=frontend-builder /app/frontend/public ./frontend/public
 
 EXPOSE 3000
 
 ENV PORT=3000
 
-CMD ["node", "server.js"]
+# The server.js is located in the frontend subdirectory within standalone
+CMD ["node", "frontend/server.js"]

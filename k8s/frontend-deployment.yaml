@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
+  namespace: noclue-app
   labels:
     app: frontend
 spec:
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: gcr.io/PROJECT_ID/frontend:latest
+        image: gcr.io/noclue-476404/frontend:latest
         ports:
         - containerPort: 3000
         env:
