@@ -321,7 +321,7 @@ export default function MatchingPage() {
                                     disabled={isFormDisabled}
                                     className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 
                                         ${formTopics.includes(topic) 
-                                            ? 'bg-indigo-600 text-white shadow-md' 
+                                            ? 'bg-blue-500 text-white shadow-md' 
                                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'}
                                         ${isFormDisabled ? 'cursor-not-allowed' : ''}`
                                     }
@@ -348,9 +348,7 @@ export default function MatchingPage() {
                                     type="button"
                                     className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 border-2
                                         ${diff === formDifficulty
-                                            // Selected Style
-                                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                                            // Default Style with new hover effect
+                                            ? 'bg-blue-500 text-white shadow-md border-blue-500'
                                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'}
                                         ${isFormDisabled ? 'cursor-not-allowed' : ''}`
                                     }
