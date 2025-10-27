@@ -1,0 +1,214 @@
+# GKE Cluster Configuration
+# This file contains the base configuration for the NoClue GKE cluster
+# Environment-specific overrides can be placed in config/environments/*.yaml
+
+# GCP Project Configuration
+project_id: noclue-476404
+
+# GKE Cluster Configuration
+cluster:
+  # Cluster name
+  name: noclue-cluster
+
+  # Location configuration
+  region: us-central1
+  zone: us-central1-a
+
+  # Network configuration
+  network: default
+  subnet: default
+
+  # Kubernetes namespace
+  namespace: noclue-app
+
+  # Project ID reference
+  project_id: noclue-476404
+
+# Node Pool Configuration
+nodePool:
+  # Initial node count
+  initialNodeCount: 1
+
+  # Machine type
+  machineType: e2-small
+
+  # Disk size in GB
+  diskSizeGb: 30
+
+  # Autoscaling configuration
+  minNodes: 1
+  maxNodes: 1
+
+  # Use preemptible nodes (set to true for cost savings)
+  preemptible: false
+
+  # Service account for cluster nodes
+  # This service account needs the following roles:
+  # - roles/logging.logWriter
+  # - roles/monitoring.metricWriter
+  # - roles/monitoring.viewer
+  # - roles/storage.objectViewer
+  serviceAccount: noclue-cluster-sa@noclue-476404.iam.gserviceaccount.com
+
+  # Cluster features
+  features:
+    # Enable Workload Identity for better security
+    workload_identity: false
+
+    # Enable HTTP load balancing
+    http_load_balancing: true
+
+    # Enable horizontal pod autoscaling
+    horizontal_pod_autoscaling: true
+
+    # Enable network policy
+    network_policy: false
+
+    # Enable binary authorization
+    binary_authorization: false
+
+  # Maintenance window (UTC time)
+  maintenance_window:
+    start_time: "02:00"  # 2 AM UTC
+    duration: "4h"
+
+  # Release channel (rapid, regular, stable)
+  release_channel: stable
+
+# Kubernetes Configuration
+kubernetes:
+  # Default namespace for application deployments
+  namespace: noclue-app
+
+  # Additional namespaces to create
+  additional_namespaces:
+    - noclue-monitoring
+    - noclue-staging
+
+  # Resource quotas for the main namespace
+  resource_quotas:
+    requests_cpu: "2"
+    requests_memory: "4Gi"
+    limits_cpu: "4"
+    limits_memory: "8Gi"
+    pods: "20"
+
+# Container Registry Configuration
+registry:
+  # GCR or Artifact Registry location
+  location: us-central1
+
+  # Repository name
+  repository: noclue-docker
+
+  # Full registry path (computed)
+  path: us-central1-docker.pkg.dev/noclue-476404/noclue-docker
+
+# Application Services Configuration
+services:
+  # Frontend service
+  frontend:
+    name: frontend
+    replicas: 1
+    port: 3000
+
+  # Backend services
+  user_service:
+    name: user-service
+    replicas: 1
+    port: 3001
+
+  question_service:
+    name: question-service
+    replicas: 1
+    port: 3002
+
+  matching_service:
+    name: matching-service
+    replicas: 1
+    port: 3003
+
+  collaboration_service:
+    name: collaboration-service
+    replicas: 1
+    port: 3004
+
+# Health Check Configuration
+health_checks:
+  # Liveness probe settings
+  liveness:
+    initial_delay_seconds: 30
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+
+  # Readiness probe settings
+  readiness:
+    initial_delay_seconds: 10
+    period_seconds: 5
+    timeout_seconds: 3
+    failure_threshold: 3
+
+# Resource Limits
+resources:
+  # Default resource requests and limits for pods
+  defaults:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # Service-specific overrides
+  overrides:
+    frontend:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+
+# Logging and Monitoring
+observability:
+  # Enable GCP logging
+  logging:
+    enabled: true
+    retention_days: 30
+
+  # Enable GCP monitoring
+  monitoring:
+    enabled: true
+
+  # Enable alerting
+  alerting:
+    enabled: false
+
+# Backup and Disaster Recovery
+backup:
+  # Enable automated backups
+  enabled: false
+
+  # Backup schedule (cron format)
+  schedule: "0 2 * * *"  # Daily at 2 AM
+
+  # Backup retention period (days)
+  retention_days: 7
+
+# Labels and Tags
+labels:
+  environment: production
+  project: noclue
+  managed_by: shell-scripts
+  team: cs3219
+
+# Additional Notes:
+# - This configuration is optimized for a small development/testing cluster
+# - For production, consider:
+#   - Increasing node count and machine type
+#   - Enabling workload identity
+#   - Setting up proper autoscaling
+#   - Enabling network policies for security
+#   - Setting up monitoring and alerting
+#   - Configuring proper backup strategies

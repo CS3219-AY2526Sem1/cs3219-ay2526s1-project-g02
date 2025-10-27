@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: matching-service
+  namespace: noclue-app
+  labels:
+    app: matching-service
+spec:
+  type: ClusterIP
+  selector:
+    app: matching-service
+  ports:
+  - port: 4003
+    targetPort: 4003
+    protocol: TCP
+    name: http

@@ -1,0 +1,328 @@
+# Production Environment Configuration
+# This file contains production-specific overrides for the cluster configuration
+# Base configuration is in config/cluster.yaml
+
+# Environment identifier
+environment: production
+
+# GCP Project Configuration (inherits from base if not specified)
+project_id: noclue-476404
+
+# Production Cluster Overrides
+cluster:
+  # Production cluster settings
+  name: noclue-cluster-prod
+
+  # Location configuration
+  region: us-central1
+  zone: us-central1-a
+
+  # Node pool configuration for production
+  initial_node_count: 3
+  machine_type: e2-medium  # Upgraded from e2-small
+  disk_size_gb: 50         # Increased from 30GB
+
+  # Production autoscaling
+  min_nodes: 2
+  max_nodes: 5
+
+  # Enable production features
+  features:
+    workload_identity: true
+    http_load_balancing: true
+    horizontal_pod_autoscaling: true
+    network_policy: true
+    binary_authorization: false
+
+  # Maintenance window (UTC) - Sunday 2 AM
+  maintenance_window:
+    start_time: "02:00"
+    duration: "4h"
+    day: "sunday"
+
+  # Use stable release channel for production
+  release_channel: stable
+
+# Kubernetes Production Configuration
+kubernetes:
+  namespace: noclue-app
+
+  # Additional namespaces for production
+  additional_namespaces:
+    - noclue-monitoring
+    - noclue-staging
+    - noclue-canary
+
+  # Production resource quotas (increased)
+  resource_quotas:
+    requests_cpu: "4"
+    requests_memory: "8Gi"
+    limits_cpu: "8"
+    limits_memory: "16Gi"
+    pods: "50"
+
+# Production Application Services
+services:
+  frontend:
+    name: frontend
+    replicas: 2  # Multiple replicas for HA
+    port: 3000
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 5
+      target_cpu_utilization: 70
+
+  user_service:
+    name: user-service
+    replicas: 2
+    port: 3001
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 4
+      target_cpu_utilization: 70
+
+  question_service:
+    name: question-service
+    replicas: 2
+    port: 3002
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 4
+      target_cpu_utilization: 70
+
+  matching_service:
+    name: matching-service
+    replicas: 2
+    port: 3003
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 4
+      target_cpu_utilization: 70
+
+  collaboration_service:
+    name: collaboration-service
+    replicas: 2
+    port: 3004
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 4
+      target_cpu_utilization: 70
+
+# Production Health Check Configuration
+health_checks:
+  liveness:
+    initial_delay_seconds: 60  # Longer delay for production
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+
+  readiness:
+    initial_delay_seconds: 30  # Longer delay for production
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+
+# Production Resource Limits
+resources:
+  defaults:
+    requests:
+      cpu: "200m"      # Increased from 100m
+      memory: "256Mi"  # Increased from 128Mi
+    limits:
+      cpu: "1000m"     # Increased from 500m
+      memory: "1Gi"    # Increased from 512Mi
+
+  # Production service-specific overrides
+  overrides:
+    frontend:
+      requests:
+        cpu: "300m"
+        memory: "512Mi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+
+    user_service:
+      requests:
+        cpu: "250m"
+        memory: "384Mi"
+      limits:
+        cpu: "1500m"
+        memory: "1.5Gi"
+
+    question_service:
+      requests:
+        cpu: "250m"
+        memory: "384Mi"
+      limits:
+        cpu: "1500m"
+        memory: "1.5Gi"
+
+    matching_service:
+      requests:
+        cpu: "250m"
+        memory: "384Mi"
+      limits:
+        cpu: "1500m"
+        memory: "1.5Gi"
+
+    collaboration_service:
+      requests:
+        cpu: "300m"
+        memory: "512Mi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+
+# Production Observability Configuration
+observability:
+  logging:
+    enabled: true
+    retention_days: 90  # Increased retention
+    log_level: info     # Use info level for production
+
+  monitoring:
+    enabled: true
+    metrics_retention_days: 90
+
+  alerting:
+    enabled: true
+    notification_channels:
+      - email
+      - slack
+
+  # Distributed tracing
+  tracing:
+    enabled: true
+    sampling_rate: 0.1  # Sample 10% of requests
+
+# Production Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM UTC
+  retention_days: 30     # Keep backups for 30 days
+
+  # Backup destinations
+  destinations:
+    - gcs_bucket: noclue-backups-prod
+      path: /cluster-backups
+
+# Production Security Configuration
+security:
+  # Network policies
+  network_policies:
+    enabled: true
+    default_deny: true
+
+  # Pod security policies
+  pod_security:
+    enabled: true
+    standard: restricted
+
+  # Secrets encryption
+  secrets_encryption:
+    enabled: true
+    key_rotation_days: 90
+
+  # Vulnerability scanning
+  vulnerability_scanning:
+    enabled: true
+    schedule: "0 3 * * *"  # Daily at 3 AM
+
+# Production DNS and Ingress
+ingress:
+  enabled: true
+  class: gce  # Use Google Cloud Load Balancer
+
+  # SSL/TLS configuration
+  tls:
+    enabled: true
+    cert_manager: true
+
+  # Domain configuration
+  domains:
+    - noclue.app
+    - www.noclue.app
+    - api.noclue.app
+
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+
+# Production Database Configuration (Supabase)
+database:
+  connection_pool_size: 20
+  max_connections: 100
+  statement_timeout: 30000  # 30 seconds
+  idle_timeout: 600000      # 10 minutes
+
+# Production Caching Configuration
+cache:
+  enabled: true
+  type: redis
+  ttl: 3600  # 1 hour default TTL
+
+# Production Labels and Tags
+labels:
+  environment: production
+  project: noclue
+  managed_by: shell-scripts
+  team: cs3219
+  tier: production
+  backup_policy: daily
+  monitoring: enabled
+
+# Cost Optimization
+cost_optimization:
+  # Use preemptible nodes for non-critical workloads
+  preemptible_nodes:
+    enabled: false  # Disabled for production stability
+
+  # Commitment usage
+  committed_use_discount: true
+
+  # Autoscaling policies
+  autoscaling:
+    scale_down_delay: 10m
+    scale_down_unneeded_time: 10m
+
+# Disaster Recovery
+disaster_recovery:
+  # Multi-region failover
+  multi_region:
+    enabled: false
+    secondary_region: us-east1
+
+  # RTO and RPO targets
+  rto_minutes: 60   # Recovery Time Objective
+  rpo_minutes: 15   # Recovery Point Objective
+
+# Compliance and Audit
+compliance:
+  # Enable audit logging
+  audit_logging:
+    enabled: true
+    retention_days: 365
+
+  # Data residency
+  data_residency: us
+
+  # Compliance standards
+  standards:
+    - soc2
+    - gdpr
+
+# Additional Production Notes:
+# - This configuration is for production workloads
+# - All services run with multiple replicas for high availability
+# - Resource limits are set higher to handle production traffic
+# - Monitoring, logging, and alerting are fully enabled
+# - Backups are automated and retained for 30 days
+# - Security features like network policies are enabled
+# - Consider setting up multi-region deployment for critical systems
