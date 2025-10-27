@@ -122,6 +122,14 @@ export default function MatchingPage() {
         onCompleted(data) {
             const result: MatchResultOutput = data.findMatch;
             setMatchResult(result);
+
+            if (!result.matchFound && !result.queued && result.reason === 'User already in active match') {
+                console.warn('User is already in an active match.');
+                setStatus('ERROR');
+                setNotification({ message: 'You are already in an active match.', status: 'ERROR' });
+                return;
+            }
+
             if (result.matchFound) {
                 console.log('Match found immediately:', result);
                 setStatus('MATCH_FOUND')
