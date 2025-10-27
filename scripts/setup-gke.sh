@@ -318,7 +318,7 @@ display_setup_summary() {
 # =============================================================================
 
 main() {
-    log_header "GKE Cluster Setup - NoClue Project"
+    print_header "GKE Cluster Setup - NoClue Project"
 
     # Step 1: Validate prerequisites
     validate_prerequisites
