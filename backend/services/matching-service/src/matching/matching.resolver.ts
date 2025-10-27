@@ -13,7 +13,7 @@ export class MatchingResolver {
   @Mutation(() => String)
   async requestMatch(
     @Args({ name: 'userId', type: () => String }) userId: string,
-    @Args({ name: 'preferences', type: () => Object }) preferences: any
+    @Args('preferences') preferences: any
   ) {
     return this.matchingService.createMatchRequest(userId, preferences);
   }

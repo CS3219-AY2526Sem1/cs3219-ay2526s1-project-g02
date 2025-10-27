@@ -26,14 +26,14 @@ export class QuestionsResolver {
   }
 
   @Mutation(() => String)
-  async createQuestion(@Args({ name: 'input', type: () => Object }) input: CreateQuestionInput) {
+  async createQuestion(@Args('input') input: CreateQuestionInput) {
     return this.questionsService.create(input);
   }
 
   @Mutation(() => String)
   async updateQuestion(
     @Args({ name: 'id', type: () => String }) id: string,
-    @Args({ name: 'input', type: () => Object }) input: UpdateQuestionInput,
+    @Args('input') input: UpdateQuestionInput,
   ) {
     return this.questionsService.update(id, input);
   }

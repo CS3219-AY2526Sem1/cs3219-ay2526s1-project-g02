@@ -21,14 +21,14 @@ export class UsersResolver {
   }
 
   @Mutation(() => String)
-  async createUser(@Args({ name: 'input', type: () => Object }) input: CreateUserInput) {
+  async createUser(@Args('input') input: CreateUserInput) {
     return this.usersService.create(input);
   }
 
   @Mutation(() => String)
   async updateUser(
     @Args({ name: 'id', type: () => String }) id: string,
-    @Args({ name: 'input', type: () => Object }) input: UpdateUserInput,
+    @Args('input') input: UpdateUserInput,
   ) {
     return this.usersService.update(id, input);
   }
