@@ -8,7 +8,21 @@ import { useMutation } from "@apollo/client";
 import { CancelMatchRequestInput, MatchRequestInput, MatchResultOutput } from "@noclue/common";
 import { useCallback, useEffect, useState } from "react";
 
-const TEST_USER_ID = '0809ff88-e25c-42af-b8f0-820cf73e2fee'; // TODO: Replace with actual userId logic
+// TODO: Temporary test user Ids (to be replaced with auth)
+const TEST_USER_IDS = {
+    testUser32: '0809ff88-e25c-42af-b8f0-820cf73e2fee',
+    testUser16: '12a29bf7-f924-432a-abd2-0afa36d03f39',
+}
+
+// TODO: Temporary selection of test user from URL
+const getTestUserId = () => {
+    if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryId = urlParams.get('userId');
+        if (queryId) return queryId;
+    }
+    return TEST_USER_IDS.testUser32;
+}
 
 const LANGUAGES = ['JavaScript', 'Python', 'Java', 'C++', 'Go', 'Rust'];
 const TOPICS = ['Algorithms', 'Data Structures', 'Graphs and Trees', 'Networking', 'Concurrency', 'Databases'];
@@ -24,6 +38,10 @@ type MatchStatus =
     | 'ERROR';
 
 export default function MatchingPage() {
+
+    // Todo: Retrieve test user Id (replace with auth later)
+    const ACTIVE_USER_ID = getTestUserId();
+
     const [status, setStatus] = useState<MatchStatus>('IDLE');
     const [matchResult, setMatchResult] = useState<MatchResultOutput | null>(null); // from sync graphQL
     const [finalMatchData, setFinalMatchData] = useState<MatchFoundData | null>(null); // from async websocket
@@ -141,7 +159,6 @@ export default function MatchingPage() {
     })
 
     // 2a. Upon 'Find Match' button press
-    // TODO: Connect to button
     const handleStartMatch = () => {
         if (loading) return; 
         setStatus('LOADING');
@@ -149,7 +166,7 @@ export default function MatchingPage() {
         setNotification(null);
 
         const input: MatchRequestInput = {
-            userId: TEST_USER_ID,
+            userId: ACTIVE_USER_ID,
             language: formLanguage,
             topics: formTopics,
             difficulty: formDifficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
@@ -158,7 +175,6 @@ export default function MatchingPage() {
     }
 
     // 2b. Upon 'Cancel Match' button press
-    // TODO: Connect to button
     const handleCancelMatch = () => { 
         const requestId = matchResult?.requestId;
         if (status !== 'QUEUED' || !requestId) {
@@ -170,10 +186,11 @@ export default function MatchingPage() {
 
     }
 
+    // 3. Initial Socket.IO Connection
     useEffect(() => {
-        if (TEST_USER_ID) {
-            matchingSocket.auth = { userId: TEST_USER_ID };
-            console.log('Set socket auth with userId:', { userId: TEST_USER_ID });
+        if (ACTIVE_USER_ID) {
+            matchingSocket.auth = { userId: ACTIVE_USER_ID };
+            console.log('Set socket auth with userId:', { userId: ACTIVE_USER_ID });
         }
 
         if (!matchingSocket.connected) {
@@ -195,7 +212,7 @@ export default function MatchingPage() {
 
     }, []);
 
-    // 3. Socket.IO connection and Listener Hook
+    // 4. Socket.IO Listeners
     useEffect(() => {
         // Event Listener for 'matchFound' (i.e. match found after being queued)
         const handleMatchFoundEvent = (data: MatchFoundData) => {
@@ -228,7 +245,7 @@ export default function MatchingPage() {
 
     }, [status, matchResult]);
 
-    // 4. UI State
+    // 5. UI State
     const isFormDisabled = status === 'LOADING' || status === 'QUEUED' || status === 'MATCH_FOUND';
     const buttonDisabledForStart = formTopics.length === 0 || loading || canceling;
     const isReadyState = status === 'IDLE' || status === 'REQUEST_EXPIRED' || status === 'CANCELLED' || status === 'ERROR';
@@ -363,20 +380,20 @@ export default function MatchingPage() {
                             </Button>
                         </div>
                     ) : status === 'MATCH_FOUND' ? (
-                        <div className="flex items-center justify-between space-x-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-md">
-                        <span className="text-green-700 font-semibold flex-1">
-                            Success! Matched with **{finalMatchData?.matchedUserId || matchResult?.matchedUserId || 'a partner'}**
-                        </span>
-                        <Button 
-                            onClick={() => {
-                                console.log('Navigating to session...');
-                                dismissNotification();
-                            }}
-                            variant="primary" 
-                        >
-                            Go to Session
-                        </Button>
-                    </div>
+                        <div className="flex flex-col items-center justify-between space-x-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-md">
+                            <span className="text-green-700 font-semibold flex-1 mb-4">
+                                Success! Matched with {finalMatchData?.matchedUserId || matchResult?.matchedUserId || 'a partner'}
+                            </span>
+                            <Button 
+                                onClick={() => {
+                                    console.log('Navigating to session...');
+                                    dismissNotification();
+                                }}
+                                variant="primary" 
+                            >
+                                Go to Session
+                            </Button>
+                        </div>
                     ) : status === 'LOADING' ? (
                         <div className="flex items-center justify-center p-4">
                             <Loading message="Sending Request..."/>
