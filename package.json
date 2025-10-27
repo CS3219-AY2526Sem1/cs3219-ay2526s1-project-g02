@@ -6,7 +6,8 @@
   "workspaces": [
     "frontend",
     "backend",
-    "common"
+    "common",
+    "backend/services/*"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
@@ -18,6 +19,7 @@
     "build:common": "npm run build --workspace=common",
     "start:frontend": "npm run start --workspace=frontend",
     "start:backend": "npm run start:prod --workspace=backend",
+    "dev:collaboration": "npm run start:dev --workspace=@noclue/collaboration-service",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },

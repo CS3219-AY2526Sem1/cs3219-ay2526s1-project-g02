@@ -4,7 +4,8 @@
   "description": "Backend microservices for NoClue platform",
   "private": true,
   "workspaces": [
-    "services/*"
+    "services/*",
+    "backend/services/*"
   ],
   "scripts": {
     "install:services": "npm install && npm install --workspaces",

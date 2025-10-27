@@ -41,8 +41,9 @@ COPY --from=service-builder /app/backend/services/collaboration-service/dist ./d
 COPY --from=service-builder /app/backend/services/collaboration-service/package*.json ./
 COPY --from=service-builder /app/backend/services/collaboration-service/node_modules ./node_modules
 
-EXPOSE 4004
+EXPOSE 4004 1234
 
 ENV PORT=4004
+ENV YJS_PORT=1234
 
 CMD ["node", "dist/main.js"]
