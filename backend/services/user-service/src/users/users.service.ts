@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
+import { CreateUserInput } from './dto/create-user.input';
+import { UpdateUserInput } from './dto/update-user.input';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -16,19 +18,6 @@ export interface User {
   updatedAt: string;
 }
 
-export interface CreateUserInput {
-  email: string;
-  name: string;
-  role?: string;
-  skillLevel?: string;
-}
-
-export interface UpdateUserInput {
-  email?: string;
-  name?: string;
-  role?: string;
-  skillLevel?: string;
-}
 
 @Injectable()
 export class UsersService {
