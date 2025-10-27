@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: collaboration-service
-        image: gcr.io/PROJECT_ID/collaboration-service:latest
+        image: gcr.io/noclue-476404/collaboration-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 4004
@@ -32,6 +32,11 @@ spec:
           value: "4004"
         - name: NODE_ENV
           value: "production"
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_SECRET_KEY
         - name: USER_SERVICE_URL
           value: "http://user-service.noclue-app.svc.cluster.local:4001"
         - name: QUESTION_SERVICE_URL

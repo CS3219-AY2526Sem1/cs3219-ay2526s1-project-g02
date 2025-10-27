@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: matching-service
-        image: gcr.io/PROJECT_ID/matching-service:latest
+        image: gcr.io/noclue-476404/matching-service:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 4003
@@ -32,6 +32,11 @@ spec:
           value: "4003"
         - name: NODE_ENV
           value: "production"
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_SECRET_KEY
         - name: USER_SERVICE_URL
           value: "http://user-service.noclue-app.svc.cluster.local:4001"
         - name: QUESTION_SERVICE_URL
