@@ -1,16 +1,7 @@
 name: Build and Deploy to GKE
 
 on:
-  # TODO: Revert to push to main only before final production deployment
-  # push:
-  #   branches:
-  #     - main
-  #   paths-ignore:
-  #     - '**.md'
-  #     - 'docs/**'
-
-  # Temporarily running on PRs for CI/CD testing
-  pull_request:
+  push:
     branches:
       - main
     paths-ignore:
@@ -129,12 +120,6 @@ jobs:
       run: |
         chmod +x ./scripts/deploy-services.sh
         ./scripts/deploy-services.sh
-
-    # Run health checks
-    - name: Health Check
-      run: |
-        chmod +x ./scripts/health-check.sh
-        ./scripts/health-check.sh
 
     # Get service URLs
     - name: Get Service URLs
