@@ -22,6 +22,8 @@ COPY backend/services/user-service/src ./backend/services/user-service/src
 
 # Install dependencies and build
 WORKDIR /app/backend/services/user-service
+# Install local common package first
+RUN npm install /app/common
 RUN npm install
 RUN npm run build
 

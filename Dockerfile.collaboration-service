@@ -22,6 +22,8 @@ COPY backend/services/collaboration-service/src ./backend/services/collaboration
 
 # Install dependencies and build
 WORKDIR /app/backend/services/collaboration-service
+# Install local common package first
+RUN npm install /app/common
 RUN npm install
 RUN npm run build
 
