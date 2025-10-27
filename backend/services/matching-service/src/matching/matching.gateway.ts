@@ -21,7 +21,7 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
     handleConnection(@ConnectedSocket() client: Socket, ...args: any[]) {
         // TODO: Authenticate user
         
-        const userId = client.handshake.query.userId as string;
+        const userId = client.handshake.auth.userId as string;
 
         if (userId) {
             this.activeUsers.set(userId, client);
