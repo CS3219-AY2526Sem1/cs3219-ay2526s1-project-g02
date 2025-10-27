@@ -26,19 +26,19 @@ export default function Editor({
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     if (!editor) throw new Error("Editor not found");
-    editorRef.current = editor;
     if (!webSocketService) throw new Error("WebSocket service not provided");
-    webSocketService?.connect();
-    const _binding = webSocketService?.bindToEditor(editor);
-    if (!_binding) throw new Error("Failed to bind to editor");
-    setBinding(_binding);
-  };
 
-  useEffect(() => {
-    return () => {
-      binding?.destroy();
-    };
-  }, [binding, webSocketService]);
+    editorRef.current = editor;
+
+    // Clean up existing binding before creating new one
+    binding?.destroy();
+
+    webSocketService.connect();
+    const newBinding = webSocketService.bindToEditor(editor);
+    if (!newBinding) throw new Error("Failed to bind to editor");
+
+    setBinding(newBinding);
+  };
 
   return (
     <MonacoEditor
