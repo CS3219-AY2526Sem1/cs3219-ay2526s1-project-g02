@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/dist/client/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./providers/AuthProvider";
+import { FcGoogle } from "react-icons/fc"; // Google 'G' (colored)
+import { FaGithub } from "react-icons/fa"; // GitHub mark
 
 export default function LoginModal() {
   const router = useRouter();
@@ -95,16 +97,44 @@ export default function LoginModal() {
               Login
             </Button>
 
-            <div>
-              {/* <Button
-                onClick={() =>
-                  supabase.auth.signInWithOAuth({
+            <div className="flex flex-row justify-between">
+              <Button
+                className="w-[45%]"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await supabase.auth.signInWithOAuth({
                     provider: "google",
-                  })
-                }
+                    options: {
+                      redirectTo: `http://localhost.com:3000/auth/callback`,
+                    },
+                  });
+                }}
               >
-                Login with Google
-              </Button> */}
+                <div className="flex flex-row justify-center items-center gap-2">
+                  <div>
+                    <FcGoogle> </FcGoogle>
+                  </div>
+                  <div> Login with Google</div>
+                </div>
+              </Button>
+
+              <Button
+                className="w-[45%] "
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await supabase.auth.signInWithOAuth({
+                    provider: "github",
+                    options: {
+                      redirectTo: `http://localhost.com:3000/auth/callback`,
+                    },
+                  });
+                }}
+              >
+                <div>
+                  <FaGithub></FaGithub>
+                </div>
+                <div> Login with GitHub</div>
+              </Button>
             </div>
             <div className="text-xs font-bold text-red-500">{error}</div>
           </form>

@@ -30,6 +30,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.7.0"
+    "@supabase/ssr": "^0.7.0",
+    "react-icons": "^5.5.0"
   }
 }
