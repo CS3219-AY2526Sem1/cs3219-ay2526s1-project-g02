@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/dist/client/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./providers/AuthProvider";
-import { FcGoogle } from "react-icons/fc"; // Google 'G' (colored)
-import { FaGithub } from "react-icons/fa"; // GitHub mark
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 
 export default function LoginModal() {
   const router = useRouter();

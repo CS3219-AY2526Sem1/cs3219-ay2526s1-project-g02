@@ -75,7 +75,7 @@ export class UsersService {
 
       const supabaseInstance = createClient(
         process.env.SUPABASE_URL!,
-        process.env.SUPABASE_KEY!,
+        process.env.SUPABASE_SECRET_KEY!,
         {
           global: {
             headers: {
