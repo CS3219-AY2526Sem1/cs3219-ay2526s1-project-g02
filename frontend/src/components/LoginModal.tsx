@@ -94,6 +94,18 @@ export default function LoginModal() {
             <Button className="mt-4" onClick={(e) => handleLogin(e)}>
               Login
             </Button>
+
+            <div>
+              {/* <Button
+                onClick={() =>
+                  supabase.auth.signInWithOAuth({
+                    provider: "google",
+                  })
+                }
+              >
+                Login with Google
+              </Button> */}
+            </div>
             <div className="text-xs font-bold text-red-500">{error}</div>
           </form>
         </div>

@@ -18,19 +18,19 @@ export default function NavBar() {
   async function handleLogOut(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const { data } = await supabase.auth.getSession();
-      const access_token = data.session?.access_token;
+      //   const { data } = await supabase.auth.getSession();
+      //   const access_token = data.session?.access_token;
 
-      console.log("ACCESS TOKEN ON LOGOUT:", access_token);
+      //   console.log("ACCESS TOKEN ON LOGOUT:", access_token);
 
-      const res = await fetch("http://localhost:4001/users/signout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token }),
-      });
+      //   const res = await fetch("http://localhost:4001/users/signout", {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({ access_token }),
+      //   });
 
-      const result = await res.json();
-      console.log(result.message || "Signout response:", result);
+      //   const result = await res.json();
+      //   console.log(result.message || "Signout response:", result);
 
       await supabase.auth.signOut();
       setSession(null);

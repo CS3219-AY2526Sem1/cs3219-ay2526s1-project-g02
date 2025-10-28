@@ -42,11 +42,6 @@ export class UsersController {
     return this.userService.logIn(dto.email, dto.password);
   }
 
-  @Post("signout")
-  async signout(@Body() dto: SignOutDto) {
-    return this.userService.signOut(dto.access_token);
-  }
-
   @Post("resetpasswordlink")
   async resetPasswordLink(@Body() dto: ResetPasswordDto) {
     return this.userService.resetPasswordLink(dto.email);

@@ -55,21 +55,6 @@ export class UsersService {
     };
   }
 
-  async signOut(access_token: string) {
-    try {
-      // Supabase Admin API - signOut requires access token
-      const { error } = await this.supabaseAdmin.auth.admin.signOut(
-        access_token
-      );
-      if (error) throw error;
-
-      return { message: "User logged out successfully" };
-    } catch (error) {
-      console.error(error);
-      throw new Error("Logout failed");
-    }
-  }
-
   async resetPasswordLink(email: string) {
     try {
       await this.supabase.auth.resetPasswordForEmail(email, {
