@@ -12,6 +12,9 @@ export default function NavBar() {
   const router = useRouter();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [error, setError] = useState("");
+
   async function handleLogOut(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -70,7 +73,7 @@ export default function NavBar() {
                   onClick={() => setIsSettingsOpen(true)}
                   className="cursor-pointer"
                 >
-                  Settings
+                  My Account
                 </Button>
                 <Button
                   className="cursor-pointer"
@@ -85,7 +88,17 @@ export default function NavBar() {
       </nav>
 
       {isSettingsOpen && (
-        <SettingsModal onClose={() => setIsSettingsOpen(false)} />
+        <SettingsModal
+          onClose={() => {
+            setIsSettingsOpen(false);
+            setIsConfirmed(false);
+            setError("");
+          }}
+          isConfirmed={isConfirmed}
+          setIsConfirmed={setIsConfirmed}
+          error={error}
+          setError={setError}
+        />
       )}
     </>
   );

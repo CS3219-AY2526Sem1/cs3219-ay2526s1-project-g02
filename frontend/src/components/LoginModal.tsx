@@ -1,16 +1,24 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
 import Link from "next/dist/client/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "./providers/AuthProvider";
 
 export default function LoginModal() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const { loading, session } = useAuth();
+
+  useEffect(() => {
+    if (session) {
+      router.push("/");
+    }
+  }, [loading, session]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +56,14 @@ export default function LoginModal() {
       console.error("An error occurred during login:", error);
     }
   };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-background">
+        <div className="h-12 w-12 rounded-full border-4 border-gray-300 border-t-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full max-w-lg rounded-2xl border border-[#e5e7eb] bg-[#ffffff] shadow-xl ring-1 ring-[#e5e7eb]">
       <div className="p-6 flex flex-col gap-4">

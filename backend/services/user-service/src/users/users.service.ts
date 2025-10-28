@@ -128,4 +128,53 @@ export class UsersService {
       .single();
     return user !== null;
   }
+
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.warn("Password verification failed:", error.message);
+        return false;
+      }
+
+      if (data.session) {
+        await this.supabase.auth.signOut();
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Verify password error:", error);
+      return false;
+    }
+  }
+  async deleteAccountById(userId: string) {
+    try {
+      console.log(`Deleting account for user: ${userId}`);
+
+      const { error: userTableError } = await this.supabaseAdmin
+        .from("users")
+        .delete()
+        .eq("id", userId);
+
+      console.log("userTableError", userTableError);
+      if (userTableError) throw userTableError;
+
+      const { error: authError } =
+        await this.supabaseAdmin.auth.admin.deleteUser(userId);
+
+      console.log("authError", authError);
+      if (authError) throw authError;
+
+      return {
+        deletedUserId: userId,
+        message: "User data and auth account deleted.",
+      };
+    } catch (error) {
+      console.error("deleteAccountById error:", error);
+    }
+  }
 }

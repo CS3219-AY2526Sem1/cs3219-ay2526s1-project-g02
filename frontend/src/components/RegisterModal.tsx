@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/navigation";
+import { useAuth } from "./providers/AuthProvider";
 
 export default function RegisterModal() {
   const router = useRouter();
@@ -21,6 +22,11 @@ export default function RegisterModal() {
   const [isEmailTaken, setIsEmailTaken] = useState<boolean | null>(false);
   const [isUserNameTaken, setIsUserNameTaken] = useState<boolean | null>(false);
   const [isChecking, setIsChecking] = useState(true);
+  const { loading, session } = useAuth();
+
+  useEffect(() => {
+    if (session) router.replace("/");
+  }, [session]);
 
   useEffect(() => {
     setIs12Chars(password.length >= 12);
