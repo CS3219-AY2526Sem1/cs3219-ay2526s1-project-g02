@@ -5,20 +5,20 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'terraform/**'
       - '**.md'
-      - '.github/workflows/terraform.yml'
+      - 'docs/**'
+
   workflow_dispatch:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER || 'noclue-cluster' }}
-  GKE_ZONE: ${{ secrets.GKE_ZONE || 'us-central1-a' }}
-  NAMESPACE: 'noclue-app'
+  GKE_CLUSTER: noclue-cluster
+  GKE_ZONE: us-central1-a
+  NAMESPACE: noclue-app
 
 jobs:
-  setup-build-publish-deploy:
-    name: Setup, Build, Publish, and Deploy
+  deploy:
+    name: Build, Push, and Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -50,138 +50,88 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
 
     - name: Configure Docker for GCR
-      run: |
-        gcloud auth configure-docker
+      run: gcloud auth configure-docker
 
-    # Build and push Frontend
-    - name: Build Frontend Docker image
+    # Build and push Docker images
+    - name: Build and Push Frontend
       run: |
         docker build -f Dockerfile.frontend \
           -t gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/frontend:latest .
-
-    - name: Push Frontend Docker image
-      run: |
         docker push gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/frontend:latest
 
-    # Build and push User Service
-    - name: Build User Service Docker image
+    - name: Build and Push User Service
       run: |
         docker build -f Dockerfile.user-service \
           -t gcr.io/$GCP_PROJECT_ID/user-service:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/user-service:latest .
-
-    - name: Push User Service Docker image
-      run: |
         docker push gcr.io/$GCP_PROJECT_ID/user-service:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/user-service:latest
 
-    # Build and push Question Service
-    - name: Build Question Service Docker image
+    - name: Build and Push Question Service
       run: |
         docker build -f Dockerfile.question-service \
           -t gcr.io/$GCP_PROJECT_ID/question-service:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/question-service:latest .
-
-    - name: Push Question Service Docker image
-      run: |
         docker push gcr.io/$GCP_PROJECT_ID/question-service:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/question-service:latest
 
-    # Build and push Matching Service
-    - name: Build Matching Service Docker image
+    - name: Build and Push Matching Service
       run: |
         docker build -f Dockerfile.matching-service \
           -t gcr.io/$GCP_PROJECT_ID/matching-service:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/matching-service:latest .
-
-    - name: Push Matching Service Docker image
-      run: |
         docker push gcr.io/$GCP_PROJECT_ID/matching-service:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/matching-service:latest
 
-    # Build and push Collaboration Service
-    - name: Build Collaboration Service Docker image
+    - name: Build and Push Collaboration Service
       run: |
         docker build -f Dockerfile.collaboration-service \
           -t gcr.io/$GCP_PROJECT_ID/collaboration-service:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/collaboration-service:latest .
-
-    - name: Push Collaboration Service Docker image
-      run: |
         docker push gcr.io/$GCP_PROJECT_ID/collaboration-service:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/collaboration-service:latest
 
     # Get GKE credentials
     - name: Get GKE credentials
       run: |
-        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $GCP_PROJECT_ID
+        gcloud container clusters get-credentials $GKE_CLUSTER \
+          --zone $GKE_ZONE \
+          --project $GCP_PROJECT_ID
 
-    # NOTE: Secrets are managed by Terraform in the noclue-app namespace
-    # If you need to update secrets, use Terraform or kubectl directly
-
-    # Deploy Frontend to GKE
-    - name: Deploy Frontend to GKE
+    # Install kubectl auth plugin
+    - name: Install gke-gcloud-auth-plugin
       run: |
-        sed -i "s|gcr.io/PROJECT_ID/frontend:TAG|gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA|g" k8s/frontend-deployment.yaml
-        sed -i "s|namespace: default|namespace: $NAMESPACE|g" k8s/frontend-deployment.yaml
-        kubectl apply -f k8s/frontend-deployment.yaml -n $NAMESPACE
-        kubectl apply -f k8s/frontend-service.yaml -n $NAMESPACE
-        kubectl rollout status deployment/frontend -n $NAMESPACE
+        gcloud components install gke-gcloud-auth-plugin
 
-    # Deploy User Service to GKE
-    - name: Deploy User Service to GKE
+    # Setup cluster (idempotent - safe to run every time)
+    - name: Setup GKE Cluster
       run: |
-        kubectl set image deployment/user-service \
-          user-service=gcr.io/$GCP_PROJECT_ID/user-service:$GITHUB_SHA \
-          -n $NAMESPACE
-        kubectl rollout status deployment/user-service -n $NAMESPACE
+        chmod +x ./scripts/setup-gke.sh
+        ./scripts/setup-gke.sh
 
-    # Deploy Question Service to GKE
-    - name: Deploy Question Service to GKE
+    # Deploy services with secrets from GitHub Secrets
+    - name: Deploy Services
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
       run: |
-        kubectl set image deployment/question-service \
-          question-service=gcr.io/$GCP_PROJECT_ID/question-service:$GITHUB_SHA \
-          -n $NAMESPACE
-        kubectl rollout status deployment/question-service -n $NAMESPACE
+        chmod +x ./scripts/deploy-services.sh
+        ./scripts/deploy-services.sh
 
-    # Deploy Matching Service to GKE
-    - name: Deploy Matching Service to GKE
-      run: |
-        kubectl set image deployment/matching-service \
-          matching-service=gcr.io/$GCP_PROJECT_ID/matching-service:$GITHUB_SHA \
-          -n $NAMESPACE
-        kubectl rollout status deployment/matching-service -n $NAMESPACE
-
-    # Deploy Collaboration Service to GKE
-    - name: Deploy Collaboration Service to GKE
-      run: |
-        kubectl set image deployment/collaboration-service \
-          collaboration-service=gcr.io/$GCP_PROJECT_ID/collaboration-service:$GITHUB_SHA \
-          -n $NAMESPACE
-        kubectl rollout status deployment/collaboration-service -n $NAMESPACE
-
+    # Get service URLs
     - name: Get Service URLs
       run: |
         echo "=== Service URLs ==="
         echo ""
-        echo "Frontend:"
-        kubectl get service frontend-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+        echo "Frontend (LoadBalancer):"
+        kubectl get service frontend-service -n $NAMESPACE \
+          -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "Pending..."
         echo ""
         echo ""
-        echo "User Service:"
-        kubectl get service user-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+        echo "Backend Services (ClusterIP - internal only):"
+        kubectl get services -n $NAMESPACE -l service=backend || true
         echo ""
-        echo ""
-        echo "Question Service:"
-        kubectl get service question-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-        echo ""
-        echo ""
-        echo "Matching Service:"
-        kubectl get service matching-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-        echo ""
-        echo ""
-        echo "Collaboration Service:"
-        kubectl get service collaboration-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-        echo ""
+        echo "=== Deployment Complete ==="

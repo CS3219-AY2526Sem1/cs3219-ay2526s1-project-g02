@@ -5,7 +5,7 @@ COPY common/package*.json ./common/
 COPY common/tsconfig.json ./common/
 COPY common/src ./common/src
 WORKDIR /app/common
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
 # Stage 2: Build service
 FROM node:20-alpine AS service-builder
@@ -22,14 +22,16 @@ COPY backend/services/collaboration-service/src ./backend/services/collaboration
 
 # Install dependencies and build
 WORKDIR /app/backend/services/collaboration-service
-RUN npm ci
+# Install local common package first
+RUN npm install /app/common
+RUN npm install
 RUN npm run build
 
 # Stage 3: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Copy common package
 COPY --from=common-builder /app/common /app/common
@@ -39,8 +41,9 @@ COPY --from=service-builder /app/backend/services/collaboration-service/dist ./d
 COPY --from=service-builder /app/backend/services/collaboration-service/package*.json ./
 COPY --from=service-builder /app/backend/services/collaboration-service/node_modules ./node_modules
 
-EXPOSE 4004
+EXPOSE 4004 1234
 
-ENV PORT 4004
+ENV PORT=4004
+ENV YJS_PORT=1234
 
 CMD ["node", "dist/main.js"]

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: collaboration-service
+  namespace: noclue-app
+  labels:
+    app: collaboration-service
+spec:
+  type: ClusterIP
+  selector:
+    app: collaboration-service
+  ports:
+    - port: 4004
+      targetPort: 4004
+      protocol: TCP
+      name: http
+    - port: 1234
+      targetPort: 1234
+      protocol: TCP
+      name: yjs-ws

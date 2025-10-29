@@ -6,7 +6,7 @@ async function bootstrap() {
   app.enableCors({ origin: process.env.CORS_ORIGIN || '*', credentials: true });
   const port = process.env.PORT || 4003;
   await app.listen(port);
-  console.log(\`Matching Service is running on: http://localhost:\${port}\`);
+  console.log(`Matching Service is running on: http://localhost:${port}`);
 }
 
 bootstrap();

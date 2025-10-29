@@ -20,8 +20,9 @@
     "build:common": "npm run build --workspace=common",
     "start:frontend": "npm run start --workspace=frontend",
     "start:backend": "npm run start:prod --workspace=backend",
-    "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "dev:collaboration": "npm run start:dev --workspace=@noclue/collaboration-service",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",
