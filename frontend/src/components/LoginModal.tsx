@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./providers/AuthProvider";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { LOGIN_MUTATION } from "@/lib/queries";
 
 export default function LoginModal() {
   const router = useRouter();
@@ -25,22 +26,35 @@ export default function LoginModal() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:4001/users/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_GRAPHQL_URL}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: LOGIN_MUTATION,
+          variables: { input: { email, password } },
+        }),
       });
-
-      const data = await res.json();
-
+      console.log("RES", res);
       if (!res.ok) {
+        console.error("HTTP", res.status, await res.text()); // you'll see class-validator errors here
+        return;
+      }
+
+      const json = await res.json();
+      console.log("JSON", json);
+
+      if (json.errors?.length) {
         setError("Invalid email or password");
         return;
       }
 
-      const { access_token, refresh_token } = data;
+      const payload = json.data.login;
+
+      const access_token = payload?.access_token ?? null;
+      console.log("ACCESS TOK", access_token);
+      const refresh_token = payload?.refresh_token ?? null;
+      console.log("REFRESH TOK", refresh_token);
+
       const { error } = await supabase.auth.setSession({
         access_token,
         refresh_token,
@@ -51,11 +65,11 @@ export default function LoginModal() {
         return;
       }
 
-      if (res.ok) {
-        router.push("/");
-      }
-    } catch (error) {
-      console.error("An error occurred during login:", error);
+      // redirect like before
+      router.push("/");
+    } catch (err) {
+      console.error("An error occurred during login:", err);
+      setError("Internal server error");
     }
   };
   if (loading) {

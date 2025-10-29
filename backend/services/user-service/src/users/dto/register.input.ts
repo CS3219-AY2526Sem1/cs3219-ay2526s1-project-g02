@@ -1,3 +1,5 @@
+// src/users/dto/register.input.ts
+import { InputType, Field } from "@nestjs/graphql";
 import {
   IsEmail,
   IsOptional,
@@ -6,10 +8,13 @@ import {
   IsStrongPassword,
 } from "class-validator";
 
-export class LogInDto {
+@InputType()
+export class RegisterInput {
+  @Field()
   @IsEmail()
   email!: string;
 
+  @Field()
   @IsString()
   @MinLength(12)
   @IsStrongPassword({
@@ -20,4 +25,9 @@ export class LogInDto {
     minSymbols: 1,
   })
   password!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  username!: string;
 }

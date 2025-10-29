@@ -12,7 +12,11 @@ async function bootstrap() {
       transform: true, // enables class-transformer
     })
   );
-  app.enableCors({ origin: ["http://localhost:3000"] }); // FE dev origin
+  app.enableCors({
+    origin: ["http://localhost:3000"],
+
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }); // FE dev origin
   await app.listen(process.env.PORT ? Number(process.env.PORT) : 3001);
 }
 bootstrap();

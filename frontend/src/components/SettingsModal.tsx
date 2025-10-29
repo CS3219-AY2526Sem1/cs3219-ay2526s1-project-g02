@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Divide } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { DELETE_ACCOUNT_WITH_INPUT, VERIFY_PASSWORD } from "@/lib/queries";
 
 export default function SettingsModal({
   onClose,
@@ -31,36 +32,52 @@ export default function SettingsModal({
     const userId = session.user.id;
     const email = session.user.email;
 
-    const verifyRes = await fetch(
-      "http://localhost:4001/users/verify-password",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      }
-    );
-
-    if (!verifyRes.ok) {
-      setError("Incorrect password. Please try again.");
-      return;
-    }
-    const data = await verifyRes.json();
-
-    if (!data) {
-      return;
-    }
-
-    const deleteAccount = await fetch("http://localhost:4001/users/delete", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId }),
+    const verifyrRes = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: VERIFY_PASSWORD,
+        variables: { input: { email, password } },
+      }),
     });
 
-    if (deleteAccount.ok) {
+    if (!verifyrRes.ok) {
+      console.error("HTTP", verifyrRes.status, await verifyrRes.text());
+      setError("Request failed");
+      return;
+    }
+
+    const verifyJson = await verifyrRes.json();
+    if (verifyJson.errors?.length) {
+      const e = verifyJson.errors[0];
+      // e.extensions?.status === 401 when invalid
+      setError(e.message || "Invalid credentials");
+      return;
+    }
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_GRAPHQL_URL}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: DELETE_ACCOUNT_WITH_INPUT,
+        variables: { input: { userId } },
+      }),
+    });
+
+    const json = await res.json();
+
+    if (json.errors?.length) {
+      const first = json.errors[0];
+      const status = first.extensions?.status; // if you map HttpException -> extensions.status
+      const err = new Error(first.message) as Error & { status?: number };
+      err.status = status;
+      throw err;
+    }
+
+    if (res.ok) {
       onClose();
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
+
       router.push("/delete-success");
     }
   }

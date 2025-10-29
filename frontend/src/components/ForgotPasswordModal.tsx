@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import { RESET_PASSWORD_LINK } from "@/lib/queries";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -11,18 +12,17 @@ export default function ForgotPasswordPage() {
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:4001/users/resetpasswordlink", {
+      const res = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: RESET_PASSWORD_LINK,
+          variables: { input: { email } },
+        }),
       });
 
       const data = await res.json();
-
-      console.log("RESET PASSWORD RESPONSE:", data);
-      console.log("RESPONSE OK?", res.ok);
+      console.log("data", data);
 
       if (res.ok) {
         router.push("/forgot-password-success");

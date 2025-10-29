@@ -1,15 +1,18 @@
+import { InputType, Field } from "@nestjs/graphql";
 import {
   IsEmail,
-  IsOptional,
   IsString,
   MinLength,
   IsStrongPassword,
 } from "class-validator";
 
-export class VerifyPasswordDto {
+@InputType()
+export class LoginInput {
+  @Field()
   @IsEmail()
   email!: string;
 
+  @Field()
   @IsString()
   @MinLength(12)
   @IsStrongPassword({

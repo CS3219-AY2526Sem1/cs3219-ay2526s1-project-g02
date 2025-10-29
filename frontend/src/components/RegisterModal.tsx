@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./providers/AuthProvider";
+import { IS_EMAIL_TAKEN, IS_USERNAME_TAKEN, REGISTER } from "@/lib/queries";
 
 export default function RegisterModal() {
   const router = useRouter();
@@ -40,21 +41,35 @@ export default function RegisterModal() {
     const getData = setTimeout(async () => {
       try {
         setIsChecking(true);
-        const res = await fetch(
-          "http://localhost:4001/users/register/email/check?email=" + email
-        );
-        const data = await res.json();
+        const res = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: IS_EMAIL_TAKEN,
+            variables: { email },
+          }),
+        });
 
-        setIsEmailTaken(data);
+        const json = await res.json();
 
-        const res2 = await fetch(
-          "http://localhost:4001/users/register/username/check?username=" +
-            username
-        );
+        const taken: boolean = json.data.isEmailTaken;
 
-        const data2 = await res2.json();
+        setIsEmailTaken(taken);
 
-        setIsUserNameTaken(data2);
+        const userNameRes = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: IS_USERNAME_TAKEN,
+            variables: { username },
+          }),
+        });
+
+        const userNamejson = await userNameRes.json();
+
+        const userNameTaken: boolean = userNamejson.data.isUsernameTaken;
+
+        setIsUserNameTaken(userNameTaken);
       } catch (error) {
         console.error(error);
       } finally {
@@ -78,18 +93,26 @@ export default function RegisterModal() {
     e.preventDefault();
     try {
       if (submitCon && !isChecking) {
-        const res = await fetch("http://localhost:4001/users/register", {
+        const resp = await fetch(`${process.env.NEXT_PUBLIC_GRAPHQL_URL}`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            email: email,
-            password: password,
-            username: username,
+            query: REGISTER,
+            variables: {
+              input: {
+                email,
+                password,
+                username,
+              },
+            },
           }),
         });
-        const data = await res.json();
+        if (!resp.ok) {
+          throw new Error(`Network error: ${resp.status} ${resp.statusText}`);
+        }
+
+        // Parse and handle GraphQL errors
+        const { data, errors } = await resp.json();
         if (data) {
           router.push("/registerSuccess");
         }

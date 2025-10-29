@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { UPDATE_PASSWORD } from "@/lib/queries";
 
 export default function UpdatePasswordModal() {
   const [password, setPassword] = useState("");
@@ -15,8 +16,10 @@ export default function UpdatePasswordModal() {
   const [hasSymbol, setHasSymbol] = useState(false);
 
   const [isSame, setIsSame] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    setError(undefined);
     setIs12Chars(password.length >= 12);
     setHasUppandLow(/^(?=.*[a-z])(?=.*[A-Z]).+$/.test(password));
     setHasNumber(/\d/.test(password));
@@ -36,6 +39,8 @@ export default function UpdatePasswordModal() {
       const { data, error } = await supabase.auth.updateUser({
         password: password,
       });
+
+      setError(error?.message);
 
       if (!error) {
         router.push("/update-password-success");
@@ -113,6 +118,7 @@ export default function UpdatePasswordModal() {
                 )}
               </div>
             </div>
+            <div className="text-xs font-bold text-red-500">{error}</div>
 
             <Button onClick={(e) => handleUpdatePassword(e)}>
               Update Password

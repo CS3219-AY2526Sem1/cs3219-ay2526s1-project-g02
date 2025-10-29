@@ -37,7 +37,7 @@ export class UsersService {
     }
   }
 
-  async logIn(email: string, password: string) {
+  async login(email: string, password: string) {
     const { data, error } = await this.supabase.auth.signInWithPassword({
       email: email,
       password: password,
@@ -49,9 +49,11 @@ export class UsersService {
     }
 
     return {
-      access_token: data.session?.access_token,
-      refresh_token: data.session?.refresh_token,
-      user: data.user,
+      access_token: data.session?.access_token ?? undefined,
+      refresh_token: data.session?.refresh_token ?? undefined,
+      user: data.user
+        ? { id: data.user.id, email: data.user.email }
+        : undefined,
     };
   }
 
