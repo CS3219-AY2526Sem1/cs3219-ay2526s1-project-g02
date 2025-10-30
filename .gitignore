@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+package-lock.json
 
 # Testing
 coverage/
@@ -19,6 +20,23 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Configuration secrets (DO NOT COMMIT)
+config/secrets.yaml
+config/secrets-*.yaml
+config/environments/secrets*.yaml
+*.secret.yaml
+
+# GCP service account keys
+*-key.json
+service-account*.json
+gcp-*.json
+
+# Terraform state files
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
 
 # Logs
 npm-debug.log*
@@ -44,3 +62,4 @@ lerna-debug.log*
 
 .claude/
 .documentation/
+supabase/

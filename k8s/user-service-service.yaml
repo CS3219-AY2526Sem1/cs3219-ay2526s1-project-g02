@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: noclue-app
+  labels:
+    app: user-service
+spec:
+  type: ClusterIP
+  selector:
+    app: user-service
+  ports:
+  - port: 4001
+    targetPort: 4001
+    protocol: TCP
+    name: http

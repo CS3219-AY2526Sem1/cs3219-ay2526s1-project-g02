@@ -13,10 +13,18 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run start:dev --workspace=backend",
     "dev:user": "npm run start:dev --workspace=@noclue/user-service",
+    "dev:matching": "npm run start:dev --workspace=@noclue/matching-service",
+    "dev:question": "npm run start:dev --workspace=@noclue/question-service",
+    "dev:collaboration": "npm run start:dev --workspace=@noclue/collaboration-service",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
-    "test": "npm run test --workspaces"
+    "build:common": "npm run build --workspace=common",
+    "build": "npm run build:common && npm run build:frontend && npm run build:backend",
+    "start:frontend": "npm run start --workspace=frontend",
+    "start:backend": "npm run start:prod --workspace=backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",

@@ -1,46 +1,54 @@
-# Stage 1: Build common package
-FROM node:20-alpine AS common-builder
-WORKDIR /app
-COPY common/package*.json ./common/
-COPY common/tsconfig.json ./common/
-COPY common/src ./common/src
-WORKDIR /app/common
-RUN npm ci && npm run build
-
-# Stage 2: Build service
-FROM node:20-alpine AS service-builder
+# Stage 1: Build with npm workspaces
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy common package from previous stage
-COPY --from=common-builder /app/common ./common
+# Copy root package.json for workspace configuration
+COPY package*.json ./
 
-# Copy service files
-COPY backend/services/question-service/package*.json ./backend/services/question-service/
-COPY backend/services/question-service/tsconfig.json ./backend/services/question-service/
-COPY backend/services/question-service/nest-cli.json ./backend/services/question-service/
-COPY backend/services/question-service/src ./backend/services/question-service/src
+# Copy all workspace packages
+COPY common ./common
+COPY backend/tsconfig.json ./backend/tsconfig.json
+COPY backend/services/question-service ./backend/services/question-service
 
-# Install dependencies and build
-WORKDIR /app/backend/services/question-service
-RUN npm ci
-RUN npm run build
+# Copy environment files
+COPY backend/services/question-service/.env* ./backend/services/question-service/
 
-# Stage 3: Production
+# Install all dependencies using workspaces
+# This automatically handles the @noclue/common linking
+RUN npm install --workspace=@noclue/common --workspace=@noclue/question-service
+
+# Build common package first
+RUN npm run build --workspace=@noclue/common
+
+# Build question service
+RUN npm run build --workspace=@noclue/question-service
+
+# Stage 2: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
-# Copy common package
-COPY --from=common-builder /app/common /app/common
+# Copy root package.json for workspace structure
+COPY package*.json ./
 
-# Copy built service
-COPY --from=service-builder /app/backend/services/question-service/dist ./dist
-COPY --from=service-builder /app/backend/services/question-service/package*.json ./
-COPY --from=service-builder /app/backend/services/question-service/node_modules ./node_modules
+# Copy built common package
+COPY --from=builder /app/common ./common
+
+# Copy built service and its dependencies
+COPY --from=builder /app/backend/services/question-service/dist ./backend/services/question-service/dist
+COPY --from=builder /app/backend/services/question-service/package*.json ./backend/services/question-service/
+COPY --from=builder /app/backend/services/question-service/.env* ./backend/services/question-service/
+
+# Install production dependencies only
+RUN npm install --workspace=@noclue/common --workspace=@noclue/question-service --omit=dev
+
+# Copy environment file
+COPY backend/services/question-service/.env* ./
 
 EXPOSE 4002
 
-ENV PORT 4002
+ENV PORT=4002
 
+WORKDIR /app/backend/services/question-service
 CMD ["node", "dist/main.js"]

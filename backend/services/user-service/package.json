@@ -29,6 +29,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "socket.io": "^4.6.1",
+    "ts-morph": "^21.0.1",
     "ws": "^8.16.0",
     "y-websocket": "^1.5.0",
     "yjs": "^13.6.10"

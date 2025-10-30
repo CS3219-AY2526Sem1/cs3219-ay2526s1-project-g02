@@ -5,42 +5,58 @@ COPY common/package*.json ./common/
 COPY common/tsconfig.json ./common/
 COPY common/src ./common/src
 WORKDIR /app/common
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
 # Stage 2: Build service
 FROM node:20-alpine AS service-builder
 WORKDIR /app
 
-# Copy common package from previous stage
-COPY --from=common-builder /app/common ./common
+# Copy root package.json for workspace configuration
+COPY package*.json ./
 
-# Copy service files
-COPY backend/services/matching-service/package*.json ./backend/services/matching-service/
-COPY backend/services/matching-service/tsconfig.json ./backend/services/matching-service/
-COPY backend/services/matching-service/nest-cli.json ./backend/services/matching-service/
-COPY backend/services/matching-service/src ./backend/services/matching-service/src
+# Copy all workspace packages
+COPY common ./common
+COPY backend/tsconfig.json ./backend/tsconfig.json
+COPY backend/services/matching-service ./backend/services/matching-service
 
 # Install dependencies and build
 WORKDIR /app/backend/services/matching-service
-RUN npm ci
+# Install local common package first
+RUN npm install /app/common
+RUN npm install
 RUN npm run build
 
-# Stage 3: Production
+# Install all dependencies using workspaces
+RUN npm install --workspace=@noclue/common --workspace=@noclue/matching-service
+
+# Build common package first
+RUN npm run build --workspace=@noclue/common
+
+# Build matching service
+RUN npm run build --workspace=@noclue/matching-service
+
+# Stage 2: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
-# Copy common package
-COPY --from=common-builder /app/common /app/common
+# Copy root package.json for workspace structure
+COPY package*.json ./
 
-# Copy built service
-COPY --from=service-builder /app/backend/services/matching-service/dist ./dist
-COPY --from=service-builder /app/backend/services/matching-service/package*.json ./
-COPY --from=service-builder /app/backend/services/matching-service/node_modules ./node_modules
+# Copy built common package
+COPY --from=builder /app/common ./common
+
+# Copy built matching service and its dependencies
+COPY --from=builder /app/backend/services/matching-service/dist ./backend/services/matching-service/dist
+COPY --from=builder /app/backend/services/matching-service/package*.json ./backend/services/matching-service/
+COPY --from=builder /app/backend/services/matching-service/.env* ./backend/services/matching-service/
+
+# Install production dependencies only
+RUN npm install --workspace=@noclue/common --workspace=@noclue/matching-service --omit=dev
 
 EXPOSE 4003
 
-ENV PORT 4003
+ENV PORT=4003
 
 CMD ["node", "dist/main.js"]

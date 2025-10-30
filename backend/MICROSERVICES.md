@@ -208,11 +208,13 @@ CREATE TABLE questions (
 ```sql
 CREATE TABLE match_requests (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  skill_level VARCHAR(50),
-  preferred_difficulty VARCHAR(50),
-  status VARCHAR(50) DEFAULT 'pending',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  preferred_language VARCHAR(50) NOT NULL,
+  preferred_difficulty VARCHAR(50) NOT NULL,
+  preferred_topics JSONB NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending' NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 ```
 
@@ -222,9 +224,8 @@ CREATE TABLE matches (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user1_id UUID REFERENCES users(id) ON DELETE CASCADE,
   user2_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  question_id UUID REFERENCES questions(id) ON DELETE SET NULL,
   status VARCHAR(50) DEFAULT 'active',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
   ended_at TIMESTAMP WITH TIME ZONE
 );
 ```

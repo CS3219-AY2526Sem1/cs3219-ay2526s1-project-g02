@@ -5,6 +5,8 @@ import { ConfigModule } from "@nestjs/config";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo";
 import type { Request, Response } from "express";
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -25,5 +27,7 @@ import type { Request, Response } from "express";
       isGlobal: true, // makes .env variables accessible everywhere
     }),
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collaboration-service
+  namespace: noclue-app
+  labels:
+    app: collaboration-service
+    service: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collaboration-service
+  template:
+    metadata:
+      labels:
+        app: collaboration-service
+    spec:
+      containers:
+      - name: collaboration-service
+        image: gcr.io/noclue-476404/collaboration-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4004
+          name: http
+          protocol: TCP
+        envFrom:
+        - secretRef:
+            name: supabase-secrets
+        env:
+        - name: PORT
+          value: "4004"
+        - name: NODE_ENV
+          value: "production"
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
+              key: SUPABASE_SECRET_KEY
+        - name: USER_SERVICE_URL
+          value: "http://user-service.noclue-app.svc.cluster.local:4001"
+        - name: QUESTION_SERVICE_URL
+          value: "http://question-service.noclue-app.svc.cluster.local:4002"
+        - name: MATCHING_SERVICE_URL
+          value: "http://matching-service.noclue-app.svc.cluster.local:4003"
+        - name: CORS_ORIGIN
+          value: "https://noclue.com"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4004
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
