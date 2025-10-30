@@ -13,6 +13,7 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run start:dev --workspace=backend",
     "dev:matching": "npm run start:dev --workspace=@noclue/matching-service",
+    "dev:question": "npm run start:dev --workspace=@noclue/question-service",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
@@ -25,7 +26,11 @@
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@nestjs/testing": "^10.4.20",
+    "@types/jest": "^30.0.0",
+    "concurrently": "^8.2.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5"
   },
   "engines": {
     "node": ">=20.11.0",
