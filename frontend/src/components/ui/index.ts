@@ -1,5 +1,5 @@
 // Export all UI components from a single entry point
-export { Button } from './Button';
+export { Button } from './button';
 export { DifficultyBadge } from './Badge';
 export { Card, CardHeader, CardTitle, CardContent } from './Card';
 export { UserAvatar } from './UserAvatar';

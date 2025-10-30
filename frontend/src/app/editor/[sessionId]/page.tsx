@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Editor from "@/lib/components/editor";
 import { useParams } from "next/navigation";
+import { WebSocketService } from "@/lib/services/web-socket-service";
 
 export default function EditorPage() {
   const { sessionId: sessionIdParam } = useParams();
