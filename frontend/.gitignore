@@ -1,0 +1,11 @@
+# --- Env files (ignore all .env* everywhere) ---
+**/.env*
+# but keep example envs
+!**/.env.example
+!**/.env*.example
+
+# --- Lockfiles ---
+# Ignore nested package-lock.json in packages/apps...
+**/package-lock.json
+# ...but keep the root one (recommended if you use npm workspaces)
+!/package-lock.json

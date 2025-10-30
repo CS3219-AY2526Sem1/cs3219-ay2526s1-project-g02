@@ -80,7 +80,7 @@ export class MatchingService implements OnModuleInit {
 
     public async cancelMatchRequest(requestId: string): Promise<CancellationResultOutput> {
         this.logger.log(`Attempting to cancel match request with ID ${requestId}`);
-        
+
         // Step 1: Search all queues for the request
         const difficulties: Difficulty[] = ['easy', 'medium', 'hard'];
         let matchedQueueKey: string | null = null;
@@ -112,7 +112,7 @@ export class MatchingService implements OnModuleInit {
                 .select('status')
                 .eq('id', requestId)
                 .single();
-            
+
             // Not pending means either matched or expired
             if (data && data.status !== 'pending') {
                 return { success: false, reason: 'Request already matched or expired' };
@@ -147,7 +147,7 @@ export class MatchingService implements OnModuleInit {
     }
 
     /* -------------------- Private Helper Methods -------------------- */
-    
+
     // Records new match request in DB
     private async recordNewMatchRequest(request: MatchRequest): Promise<string> {
         const { userId, language, difficulty, topics } = request;
@@ -166,7 +166,7 @@ export class MatchingService implements OnModuleInit {
             })
             .select('id')
             .single();
-        
+
         if (error) {
             this.logger.error(`Failed to record match request for user ${userId}: ${error.message}`);
             throw new Error('Failed to persist match request');
@@ -174,10 +174,10 @@ export class MatchingService implements OnModuleInit {
 
         return data!.id;
     }
-    
+
     // Searches selected queue
     private async searchQueue(
-        user: MatchRequest, 
+        user: MatchRequest,
         targetDifficulty: Difficulty
     ): Promise<MatchResult> {
         const key = this.getQueueKey(targetDifficulty);
@@ -249,7 +249,7 @@ export class MatchingService implements OnModuleInit {
         this.logger.log(`User ${user.userId} queued in ${key}. Request ID: ${user.requestId}`);
     }
 
-    // Cleanup - removes matched candidate from queue 
+    // Cleanup - removes matched candidate from queue
     private async finaliseMatch(
         user: MatchRequest,
         matchedCandidate: QueueMember
@@ -258,10 +258,10 @@ export class MatchingService implements OnModuleInit {
         // Step 1: Redis cleanup - remove matched candidate from queue
         const matchedCandidateKey = this.getQueueKey(matchedCandidate.difficulty);
         const matchedCandidateStr = JSON.stringify(matchedCandidate);
-        
+
         const removedCount = await this.redisService.removeUserFromQueue(matchedCandidateKey, matchedCandidateStr);
         this.logger.log(`Removing matched user ${matchedCandidate.userId} from queue ${matchedCandidateKey}`);
-        
+
         if (removedCount !== 1) {
             this.logger.warn(`Potential race condition: Tried removing ${matchedCandidate.userId} but ZREM returned 0.`);
         }
@@ -278,7 +278,7 @@ export class MatchingService implements OnModuleInit {
             })
             .select('id')
             .single();
-        
+
         const { error: req1Error } = await this.supabase
             .from('match_requests')
             .update({ status: 'matched' })
@@ -288,7 +288,7 @@ export class MatchingService implements OnModuleInit {
             .from('match_requests')
             .update({ status: 'matched' })
             .eq('id', matchedCandidate.requestId!);
-        
+
         if (matchError || req1Error || req2Error) {
             this.logger.error(`Fatal DB Write error during finalisation: ${matchError?.message || req1Error?.message || req2Error?.message}`);
         }
@@ -327,7 +327,7 @@ export class MatchingService implements OnModuleInit {
             .update({ status: 'ended', ended_at: new Date().toISOString() })
             .eq('id', matchId)
             .select();
-        
+
             if (error) {
                 this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);
                 return;

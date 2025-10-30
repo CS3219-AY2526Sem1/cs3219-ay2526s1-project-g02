@@ -1,13 +1,15 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import { ApolloWrapper } from '@/lib/apollo-provider';
-import './globals.css';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ApolloWrapper } from "@/lib/apollo-provider";
+import "@/app/globals.css";
+import NavBar from "@/components/NavBar";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'NoClue App',
-  description: 'Full-stack application with Next.js and NestJS',
+  title: "NoClue App",
+  description: "Full-stack application with Next.js and NestJS",
 };
 
 export default function RootLayout({
@@ -18,7 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ApolloWrapper>{children}</ApolloWrapper>
+        <ApolloWrapper>
+          <AuthProvider>
+            <NavBar />
+
+            {children}
+          </AuthProvider>
+        </ApolloWrapper>
       </body>
     </html>
   );

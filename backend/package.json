@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Backend microservices for NoClue platform",
   "private": true,
+  "workspaces": [
+    "services/*",
+    "backend/services/*"
+  ],
   "scripts": {
     "install:services": "npm install && npm install --workspaces",
     "build:user": "npm run build --workspace=@noclue/user-service",
