@@ -20,7 +20,8 @@
     "react-dom": "^18.2.0",
     "y-monaco": "^0.1.6",
     "y-websocket": "^3.0.0",
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.27",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
