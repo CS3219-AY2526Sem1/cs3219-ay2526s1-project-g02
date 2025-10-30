@@ -7,7 +7,7 @@ export const typeDefs = readFileSync(
   'utf-8'
 );
 
-// Export TypeScript types for use in both frontend and backend
+// === User Service: Types and Interfaces ===
 export interface User {
   id: string;
   email: string;
@@ -45,4 +45,30 @@ export interface UpdateUserResponse {
 
 export interface DeleteUserResponse {
   deleteUser: boolean;
+}
+
+// === Matching Service: Types and Interfaces ===
+export interface MatchRequestInput {
+    userId: string;
+    language: string;
+    topics: string[];
+    difficulty: string;
+}
+
+export interface MatchResultOutput {
+    matchFound: boolean;
+    matchedUserId?: string;
+    queued: boolean;
+    queueKey?: string;
+    requestId?: string;
+    reason?: string;
+}
+
+export interface CancelMatchRequestInput {
+    requestId: string;
+}
+
+export interface CancellationResultOutput {
+    success: boolean;
+    message?: string;
 }

@@ -1,15 +1,26 @@
 type Query {
   hello: String!
+
+  # User Service
   user(id: ID!): User
   users: [User!]!
+
+  # Matching Service
+  healthCheck: String!
 }
 
 type Mutation {
+  # User Service
   createUser(input: CreateUserInput!): User!
   updateUser(id: ID!, input: UpdateUserInput!): User!
   deleteUser(id: ID!): Boolean!
+
+  # Matching Service
+  findMatch(request: MatchRequestInput!): MatchResultOutput!
+  cancelMatchRequest(request: CancelMatchRequestInput!): CancellationResultOutput!
 }
 
+# ------------------ User Service Types ------------------ #
 type User {
   id: ID!
   email: String!
@@ -26,4 +37,30 @@ input CreateUserInput {
 input UpdateUserInput {
   email: String
   name: String
+}
+
+# ------------------ Matching Service Types ------------------ #
+input MatchRequestInput {
+    userId: ID!
+    language: String!
+    topics: [String!]!
+    difficulty: String!
+}
+
+type MatchResultOutput {
+    matchFound: Boolean!
+    matchedUserId: ID
+    queued: Boolean!
+    queueKey: String
+    requestId: ID
+    reason: String
+}
+
+input CancelMatchRequestInput {
+    requestId: ID!
+}
+
+type CancellationResultOutput {
+    success: Boolean!
+    reason: String
 }
