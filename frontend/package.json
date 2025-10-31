@@ -15,6 +15,8 @@
     "@monaco-editor/react": "^4.7.0",
     "@noclue/common": "*",
     "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.47.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "graphql": "^16.8.1",
