@@ -23,7 +23,6 @@ COPY frontend/tsconfig.json ./frontend/
 COPY frontend/next.config.js ./frontend/
 COPY frontend/src ./frontend/src
 COPY frontend/public ./frontend/public
-COPY frontend/.env* ./frontend/ 2>/dev/null || true
 
 # Install dependencies from root (for workspace)
 RUN npm install
