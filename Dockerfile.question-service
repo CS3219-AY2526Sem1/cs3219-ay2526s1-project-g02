@@ -10,18 +10,15 @@ COPY common ./common
 COPY backend/tsconfig.json ./backend/tsconfig.json
 COPY backend/services/question-service ./backend/services/question-service
 
-# Copy environment files
-COPY backend/services/question-service/.env* ./backend/services/question-service/
-
-# Install all dependencies using workspaces
-# This automatically handles the @noclue/common linking
+# Install dependencies for both workspaces
 RUN npm install --workspace=@noclue/common --workspace=@noclue/question-service
 
 # Build common package first
-RUN npm run build --workspace=@noclue/common
+RUN npm run build:common
 
 # Build question service
-RUN npm run build --workspace=@noclue/question-service
+WORKDIR /app/backend/services/question-service
+RUN npm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS runner

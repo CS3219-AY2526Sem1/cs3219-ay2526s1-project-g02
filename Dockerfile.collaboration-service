@@ -11,8 +11,8 @@ COPY common ./common
 # Copy collaboration service
 COPY backend/services/collaboration-service ./backend/services/collaboration-service
 
-# Install all dependencies (root handles workspaces)
-RUN npm install
+# Install dependencies for both workspaces
+RUN npm install --workspace=@noclue/common --workspace=@noclue/collaboration-service
 
 # Build common package first
 RUN npm run build:common

@@ -11,8 +11,8 @@ COPY common ./common
 # Copy matching service
 COPY backend/services/matching-service ./backend/services/matching-service
 
-# Install all dependencies (root handles workspaces)
-RUN npm install
+# Install dependencies for both workspaces
+RUN npm install --workspace=@noclue/common --workspace=@noclue/matching-service
 
 # Build common package first
 RUN npm run build:common
