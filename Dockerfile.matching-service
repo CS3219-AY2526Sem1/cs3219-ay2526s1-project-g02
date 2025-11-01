@@ -12,21 +12,17 @@ COPY backend/package*.json ./backend/
 COPY common ./common
 COPY backend/services/matching-service ./backend/services/matching-service
 
-# Install ALL dependencies
+# Install ALL dependencies at root (sets up workspace links)
 RUN npm install
 
-# Explicitly install in the matching-service directory
-WORKDIR /app/backend/services/matching-service
-RUN npm install
-
-# Return to root for common build
-WORKDIR /app
-
-# Build common package first (includes schema.graphql copy)
+# Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Build matching service
+# Now install in service directory (can find local @noclue/common)
 WORKDIR /app/backend/services/matching-service
+RUN npm install
+
+# Build matching service
 RUN npm run build
 
 # Stage 2: Production
