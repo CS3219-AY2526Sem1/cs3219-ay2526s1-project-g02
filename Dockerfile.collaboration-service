@@ -1,49 +1,51 @@
-# Stage 1: Build common package
-FROM node:20-alpine AS common-builder
-WORKDIR /app
-COPY common/package*.json ./common/
-COPY common/tsconfig.json ./common/
-COPY common/src ./common/src
-WORKDIR /app/common
-RUN npm install && npm run build
-
-# Stage 2: Build service
-FROM node:20-alpine AS service-builder
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy common package from previous stage
-COPY --from=common-builder /app/common ./common
+# Copy root package.json for workspace configuration
+COPY package*.json ./
 
-# Copy service files
-COPY backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
-COPY backend/services/collaboration-service/tsconfig.json ./backend/services/collaboration-service/
-COPY backend/services/collaboration-service/nest-cli.json ./backend/services/collaboration-service/
-COPY backend/services/collaboration-service/src ./backend/services/collaboration-service/src
+# Copy common package
+COPY common ./common
 
-# Install dependencies and build
-WORKDIR /app/backend/services/collaboration-service
-# Install local common package first
-RUN npm install /app/common
+# Copy collaboration service
+COPY backend/services/collaboration-service ./backend/services/collaboration-service
+
+# Install all dependencies (root handles workspaces)
 RUN npm install
+
+# Build common package first
+RUN npm run build:common
+
+# Build collaboration service
+WORKDIR /app/backend/services/collaboration-service
 RUN npm run build
 
-# Stage 3: Production
+# Stage 2: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy common package
-COPY --from=common-builder /app/common /app/common
+# Copy root package.json for workspace structure
+COPY package*.json ./
 
-# Copy built service
-COPY --from=service-builder /app/backend/services/collaboration-service/dist ./dist
-COPY --from=service-builder /app/backend/services/collaboration-service/package*.json ./
-COPY --from=service-builder /app/backend/services/collaboration-service/node_modules ./node_modules
+# Copy built common package
+COPY --from=builder /app/common ./common
+
+# Copy built collaboration service and its dependencies
+COPY --from=builder /app/backend/services/collaboration-service/dist ./backend/services/collaboration-service/dist
+COPY --from=builder /app/backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
+COPY --from=builder /app/backend/services/collaboration-service/.env* ./backend/services/collaboration-service/
+
+# Install production dependencies only
+RUN npm install --workspace=@noclue/common --workspace=@noclue/collaboration-service --omit=dev
 
 EXPOSE 4004 1234
 
 ENV PORT=4004
 ENV YJS_PORT=1234
+
+WORKDIR /app/backend/services/collaboration-service
 
 CMD ["node", "dist/main.js"]

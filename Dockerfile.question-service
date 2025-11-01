@@ -43,12 +43,10 @@ COPY --from=builder /app/backend/services/question-service/.env* ./backend/servi
 # Install production dependencies only
 RUN npm install --workspace=@noclue/common --workspace=@noclue/question-service --omit=dev
 
-# Copy environment file
-COPY backend/services/question-service/.env* ./
-
 EXPOSE 4002
 
 ENV PORT=4002
 
 WORKDIR /app/backend/services/question-service
+
 CMD ["node", "dist/main.js"]
