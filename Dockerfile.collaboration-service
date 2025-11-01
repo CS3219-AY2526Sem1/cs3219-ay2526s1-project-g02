@@ -2,19 +2,20 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy root package.json for workspace configuration
+# Copy workspace configuration
 COPY package*.json ./
 
-# Copy common package
-COPY common ./common
+# Copy backend workspace configuration
+COPY backend/package*.json ./backend/
 
-# Copy collaboration service
+# Copy all workspace source files
+COPY common ./common
 COPY backend/services/collaboration-service ./backend/services/collaboration-service
 
-# Install dependencies for both workspaces
-RUN npm install --workspace=@noclue/common --workspace=@noclue/collaboration-service
+# Install ALL dependencies
+RUN npm install
 
-# Build common package first
+# Build common package first (includes schema.graphql copy)
 RUN npm run build:common
 
 # Build collaboration service

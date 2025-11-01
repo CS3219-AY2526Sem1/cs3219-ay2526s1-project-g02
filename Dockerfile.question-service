@@ -1,19 +1,22 @@
-# Stage 1: Build with npm workspaces
+# Stage 1: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy root package.json for workspace configuration
+# Copy workspace configuration
 COPY package*.json ./
 
-# Copy all workspace packages
-COPY common ./common
+# Copy backend workspace configuration
+COPY backend/package*.json ./backend/
 COPY backend/tsconfig.json ./backend/tsconfig.json
+
+# Copy all workspace source files
+COPY common ./common
 COPY backend/services/question-service ./backend/services/question-service
 
-# Install dependencies for both workspaces
-RUN npm install --workspace=@noclue/common --workspace=@noclue/question-service
+# Install ALL dependencies
+RUN npm install
 
-# Build common package first
+# Build common package first (includes schema.graphql copy)
 RUN npm run build:common
 
 # Build question service
