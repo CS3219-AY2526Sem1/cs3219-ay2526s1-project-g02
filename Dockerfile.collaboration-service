@@ -15,6 +15,13 @@ COPY backend/services/collaboration-service ./backend/services/collaboration-ser
 # Install ALL dependencies
 RUN npm install
 
+# Explicitly install in the collaboration-service directory
+WORKDIR /app/backend/services/collaboration-service
+RUN npm install
+
+# Return to root for common build
+WORKDIR /app
+
 # Build common package first (includes schema.graphql copy)
 RUN npm run build:common
 

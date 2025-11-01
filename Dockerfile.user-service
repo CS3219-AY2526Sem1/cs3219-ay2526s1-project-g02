@@ -16,6 +16,13 @@ COPY backend/services/user-service ./backend/services/user-service
 # This installs dependencies for all workspaces
 RUN npm install
 
+# Explicitly install in the user-service directory to ensure all dependencies are present
+WORKDIR /app/backend/services/user-service
+RUN npm install
+
+# Return to root for common build
+WORKDIR /app
+
 # Build common package first (includes schema.graphql copy)
 RUN npm run build:common
 
