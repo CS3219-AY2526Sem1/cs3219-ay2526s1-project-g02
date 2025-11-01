@@ -77,16 +77,14 @@ RUN npm install
 # Step 2: Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Step 3: Install in service directory (can find local @noclue/common)
-WORKDIR /app/backend/services/<SERVICE_NAME>
-RUN npm install
-
-# Step 4: Build service
-RUN npm run build
+# Step 3: Build service using workspace command (STAY AT ROOT!)
+RUN npm run build --workspace=@noclue/<SERVICE_NAME>
 
 # Stage 2: Production
 # ... (unchanged)
 ```
+
+**Key change**: No WORKDIR or service-level npm install during build stage!
 
 ---
 
@@ -98,12 +96,13 @@ RUN npm install
 ```
 **Purpose**:
 - Establishes npm workspace structure
-- Downloads initial dependencies
+- Downloads ALL dependencies for all workspaces (common + services)
 - Creates workspace symlinks
 
-**What it does NOT do**:
-- Install all service dependencies reliably
-- Build any packages
+**What it DOES do**:
+- Install all service dependencies (@nestjs/config, etc.)
+- Install all common dependencies
+- Set up proper workspace linkage
 
 ### Step 2: Build Common
 ```bash
@@ -114,28 +113,19 @@ RUN npm run build:common
 - Copies schema.graphql to dist/
 - **Creates the actual package that services depend on**
 
-**Critical**: This MUST happen before service install!
+**Critical**: This MUST happen before service build!
 
-### Step 3: Service Install
+### Step 3: Service Build (Using Workspace Command)
 ```bash
-WORKDIR /app/backend/services/<SERVICE_NAME>
-RUN npm install
-```
-**Purpose**:
-- Installs service-specific dependencies
-- Finds local `@noclue/common` (now built and available)
-- Ensures all TypeScript types are available
-
-**Why it works now**: Common package is built, so local resolution succeeds
-
-### Step 4: Service Build
-```bash
-RUN npm run build
+RUN npm run build --workspace=@noclue/<SERVICE_NAME>
 ```
 **Purpose**:
 - Compiles service TypeScript
-- All dependencies are available
+- All dependencies are available from root install
 - All types can be resolved
+- **Maintains workspace context** by running from root
+
+**Why it works**: We never WORKDIR away from root, so npm keeps workspace context throughout the build
 
 ---
 
@@ -156,8 +146,8 @@ RUN npm run build
 | 2 | Jest transform warnings | Only transform .ts files |
 | 3 | Docker stage naming | Standardize to builder/runner |
 | 4 | Missing backend workspace | Copy backend/package.json |
-| 5 | Unreliable dependencies | Double install strategy |
-| 6 | **@noclue/common 404 error** | **Build common BEFORE service install** |
+| 5 | Missing @nestjs/config | Need service dependencies installed |
+| 6 | **@noclue/common 404 error** | **Use workspace commands from root - never WORKDIR during build** |
 
 ---
 
@@ -166,22 +156,23 @@ RUN npm run build
 ### 1. **Order Matters**
 - Install root dependencies first
 - Build shared packages before consuming packages
-- Never install dependents before dependencies are built
+- Never build dependents before dependencies are built
 
 ### 2. **Local Packages Must Be Built First**
 - If Service A depends on Package B
-- Package B must be built before Service A installs
-- Otherwise npm looks for Package B in registry
+- Package B must be built before Service A builds
+- Otherwise TypeScript compilation fails
 
-### 3. **Workspace Links Aren't Enough**
-- Root install creates links
-- But linked packages must exist (be built)
-- Empty source directories won't work
+### 3. **Workspace Context Is Everything**
+- Root install sets up workspace and installs ALL dependencies
+- Never WORKDIR during build - it breaks workspace context
+- Use workspace commands from root: `npm run build --workspace=@noclue/service`
+- Once you WORKDIR, npm loses workspace context and tries to fetch from registry
 
-### 4. **Double Install Still Needed**
-- Root install: workspace structure
-- Service install: guarantee all deps
-- Both are necessary for reliability
+### 4. **Single Install Is Sufficient**
+- Root install with proper workspace structure installs everything
+- Service-level install breaks workspace context
+- Use workspace commands to build services while maintaining context
 
 ---
 
@@ -207,12 +198,12 @@ For each Dockerfile, verify this order:
 - [ ] Copy workspace files (root + backend package.json)
 - [ ] Copy source files (common + service)
 - [ ] Install at root: `RUN npm install`
-- [ ] **Build common: `RUN npm run build:common`** ← Must be BEFORE service install!
-- [ ] Change to service directory: `WORKDIR /app/backend/services/<SERVICE>`
-- [ ] Install in service: `RUN npm install`
-- [ ] Build service: `RUN npm run build`
+- [ ] Build common: `RUN npm run build:common`
+- [ ] **Build service using workspace command: `RUN npm run build --workspace=@noclue/<SERVICE>`**
+- [ ] **DO NOT use WORKDIR before building!** (Only WORKDIR in production stage for CMD)
+- [ ] **DO NOT run service-level npm install!** (Root install handles all dependencies)
 
-**If any step is out of order, builds will fail!**
+**Critical**: Stay at root directory for all build commands to maintain workspace context!
 
 ---
 
@@ -241,20 +232,30 @@ RUN npm run build:common
 ```
 ❌ Service install happens before common is built
 
-### Attempt 4: THIS ONE (Correct!)
+### Attempt 4: Build from root using workspace commands
 ```dockerfile
 RUN npm install           # Root install - workspace setup
 RUN npm run build:common  # ✅ Build common FIRST
 WORKDIR service
-RUN npm install           # ✅ Now can find local @noclue/common
-RUN npm run build         # ✅ Service has all dependencies
+RUN npm install           # ❌ STILL tries to fetch from registry!
+RUN npm run build
+```
+❌ Even after building common, WORKDIR loses workspace context
+
+### Attempt 5: THIS ONE (Actually Correct!)
+```dockerfile
+RUN npm install                                         # Root install - workspace setup
+RUN npm run build:common                                # Build common FIRST
+RUN npm run build --workspace=@noclue/question-service  # ✅ Build using workspace command
+# No WORKDIR during build - maintains workspace context!
 ```
 ✅ **Everything works!**
 
-**Critical**: The service-level `npm install` MUST come AFTER `npm run build:common`. This ensures:
-1. Common package is built and available
-2. Service can find @noclue/common locally (not from npm registry)
-3. All service-specific dependencies (@nestjs/config, etc.) are installed
+**Critical**: Never WORKDIR before the build! Use workspace commands from root:
+1. Root `npm install` installs ALL workspace dependencies (common + services)
+2. `npm run build:common` builds the common package
+3. `npm run build --workspace=@noclue/SERVICE` builds the service while maintaining workspace context
+4. No service-level `npm install` needed - root install handles everything
 
 ---
 
@@ -275,11 +276,13 @@ The CI/CD pipeline will now:
 
 ## Lessons Learned
 
-1. **Build order is critical in monorepos**
-2. **Dependencies must be built before dependents install**
-3. **Workspace links are not sufficient without built packages**
-4. **Test in Docker, not just locally** (different behavior)
-5. **When debugging, add RUN commands to inspect state**
-6. **Document the why, not just the what**
+1. **Build order is critical in monorepos** - Dependencies before dependents
+2. **Workspace context must be maintained** - Don't WORKDIR during build
+3. **Root install installs ALL workspace dependencies** - No service-level install needed
+4. **Use workspace commands from root** - `npm run build --workspace=@noclue/service`
+5. **WORKDIR breaks workspace context** - npm loses workspace info and tries registry
+6. **Test in Docker, not just locally** - Different behavior in containers
+7. **When debugging, add RUN commands to inspect state**
+8. **Document the why, not just the what**
 
-This was a complex issue with a simple solution: **build dependencies before dependents**. The nested workspace structure made it less obvious, but the principle remains the same.
+This was a complex issue that required understanding npm workspace context. The key insight: **never leave the root directory during the build process when using npm workspaces**. Once you WORKDIR away, npm loses the workspace context and tries to resolve local packages from the npm registry.

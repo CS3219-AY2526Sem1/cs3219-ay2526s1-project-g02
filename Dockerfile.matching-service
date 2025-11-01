@@ -18,10 +18,8 @@ RUN npm install
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Build matching service (install service deps after common is built)
-WORKDIR /app/backend/services/matching-service
-RUN npm install
-RUN npm run build
+# Build matching service using workspace command (stays at root to maintain workspace context)
+RUN npm run build --workspace=@noclue/matching-service
 
 # Stage 2: Production
 FROM node:20-alpine AS runner

@@ -19,10 +19,8 @@ RUN npm install
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Build question service (install service deps after common is built)
-WORKDIR /app/backend/services/question-service
-RUN npm install
-RUN npm run build
+# Build question service using workspace command (stays at root to maintain workspace context)
+RUN npm run build --workspace=@noclue/question-service
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
