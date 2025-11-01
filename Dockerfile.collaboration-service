@@ -12,17 +12,14 @@ COPY backend/package*.json ./backend/
 COPY common ./common
 COPY backend/services/collaboration-service ./backend/services/collaboration-service
 
-# Install ALL dependencies at root (sets up workspace links)
+# Install ALL dependencies at root (sets up workspace links and installs all deps)
 RUN npm install
 
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Now install in service directory (can find local @noclue/common)
+# Build collaboration service (all dependencies already installed by root npm install)
 WORKDIR /app/backend/services/collaboration-service
-RUN npm install
-
-# Build collaboration service
 RUN npm run build
 
 # Stage 2: Production
