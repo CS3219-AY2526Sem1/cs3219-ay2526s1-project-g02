@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@apollo/subgraph": "^2.11.0",
+    "@google-cloud/pubsub": "^5.2.0",
     "@nestjs/apollo": "^12.2.2",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^4.0.2",

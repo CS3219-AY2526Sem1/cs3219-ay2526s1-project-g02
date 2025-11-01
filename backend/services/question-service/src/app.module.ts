@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { QuestionsModule } from './questions/questions.module';
+import { EventBusModule } from './event-bus/event-bus.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { QuestionsModule } from './questions/questions.module';
       introspection: true,
     }),
     QuestionsModule,
+    EventBusModule,
   ],
 })
 export class AppModule {}

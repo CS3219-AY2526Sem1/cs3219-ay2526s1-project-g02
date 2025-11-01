@@ -24,14 +24,20 @@
     "start:frontend": "npm run start --workspace=frontend",
     "start:backend": "npm run start:prod --workspace=backend",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "setup:pubsub": "ts-node scripts/setup-pubsub.ts",
+    "cleanup:pubsub": "ts-node scripts/cleanup-pubsub.ts"
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.20",
     "@types/jest": "^30.0.0",
+    "@types/node": "^20.11.0",
     "concurrently": "^8.2.2",
+    "dotenv": "^16.4.7",
     "jest": "^30.2.0",
-    "ts-jest": "^29.4.5"
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=20.11.0",

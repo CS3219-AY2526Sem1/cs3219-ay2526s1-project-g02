@@ -5,10 +5,13 @@ Microservices-based coding platform with Next.js frontend and NestJS backend, de
 ## Quick Links
 
 - [Setup Guide](./docs/SETUP.md) - First-time deployment and local development
+- [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging architecture
 - [Troubleshooting](./docs/TROUBLESHOOTING.md) - Debug common issues
 - [Disaster Recovery](./docs/DISASTER_RECOVERY.md) - Emergency procedures and backups
 
 ## Architecture Overview
+
+### System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -39,14 +42,86 @@ Microservices-based coding platform with Next.js frontend and NestJS backend, de
 │  └─────────────────────────────────────────────┘   │
 └───────────────────┬─────────────────────────────────┘
                     │
-                    ▼
-        ┌────────────────────┐
-        │  Supabase Cloud    │
-        │  PostgreSQL + Auth │
-        └────────────────────┘
+          ┌─────────┴──────────┐
+          │                    │
+          ▼                    ▼
+┌────────────────────┐  ┌────────────────────┐
+│  Supabase Cloud    │  │ Google Cloud       │
+│  PostgreSQL + Auth │  │ Pub/Sub            │
+└────────────────────┘  └────────────────────┘
 
 CI/CD: GitHub Actions → Build → GCR → Deploy to GKE
 ```
+
+### Microservices Communication Flow
+
+```mermaid
+flowchart TB
+    subgraph Shared["Shared Infrastructure"]
+        supabaseDb[(Supabase PostgreSQL)]
+        pubsub[Google Cloud Pub/Sub]
+    end
+
+    subgraph Match["Matching Service :4003"]
+        queueMgr["Queue Manager<br/>Redis-based Waiting Room"]
+        matchEngine["Match Engine<br/>Skill & Topic Matching"]
+        matchProducer["Pub/Sub Publisher<br/>matching-queue"]
+        sessionConsumer["Pub/Sub Subscriber<br/>session-queue-sub"]
+        statusUpdater["Match Status Updater"]
+
+        queueMgr --> matchEngine
+        matchEngine --> matchProducer
+        sessionConsumer --> statusUpdater
+        statusUpdater --> supabaseDb
+    end
+
+    subgraph Question["Question Service :4002"]
+        matchConsumer["Pub/Sub Subscriber<br/>matching-queue-sub"]
+        allocator["Question Allocator<br/>Difficulty & Topic Based"]
+        questionProducer["Pub/Sub Publisher<br/>question-queue"]
+        graphqlResolver["GraphQL Resolver<br/>Question Queries"]
+
+        matchConsumer --> allocator
+        allocator --> supabaseDb
+        allocator --> questionProducer
+        graphqlResolver --> supabaseDb
+    end
+
+    subgraph Collab["Collaboration Service :4004"]
+        questionConsumer["Pub/Sub Subscriber<br/>question-queue-sub"]
+        sessionManager["Session Manager<br/>Yjs-based Collaboration"]
+        socketGateway["Socket.IO Gateway<br/>Real-time Sync"]
+        yjsBridge["Yjs Document Sync<br/>CRDT"]
+        sessionProducer["Pub/Sub Publisher<br/>session-queue"]
+
+        questionConsumer --> sessionManager
+        sessionManager --> supabaseDb
+        sessionManager --> socketGateway
+        socketGateway <--> yjsBridge
+        sessionManager --> sessionProducer
+    end
+
+    matchProducer -->|publishes| pubsub
+    pubsub -->|matching-queue-sub| matchConsumer
+    questionProducer -->|publishes| pubsub
+    pubsub -->|question-queue-sub| questionConsumer
+    sessionProducer -->|publishes| pubsub
+    pubsub -->|session-queue-sub| sessionConsumer
+
+    style Match fill:#e1f5ff
+    style Question fill:#fff4e1
+    style Collab fill:#f0e1ff
+    style Shared fill:#e8f5e9
+```
+
+**Message Flow:**
+1. **Match Found** → Matching Service publishes to `matching-queue`
+2. **Question Assignment** → Question Service receives match, assigns question, publishes to `question-queue`
+3. **Session Start** → Collaboration Service receives question, provisions session
+4. **Session End** → Collaboration Service publishes to `session-queue`
+5. **Match Complete** → Matching Service receives session end, updates match status
+
+For detailed Pub/Sub integration, see [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md).
 
 ## Tech Stack
 
@@ -61,18 +136,21 @@ CI/CD: GitHub Actions → Build → GCR → Deploy to GKE
 - **Language**: TypeScript
 - **GraphQL Server**: Apollo Server (Federated)
 - **Database**: Supabase (PostgreSQL)
+- **Message Queue**: Google Cloud Pub/Sub
 - **Services**:
   - User Service (Port 4001) - Authentication & user management
   - Question Service (Port 4002) - Coding problems & questions
   - Matching Service (Port 4003) - User matching with WebSocket
-  - Collaboration Service (Port 4004) - Real-time collaboration with WebSocket
+  - Collaboration Service (Port 4004) - Real-time collaboration with WebSocket & Yjs
 
 ### Shared
 - **GraphQL Schema**: Shared type definitions in `common/` package
+- **Pub/Sub Module**: Reusable messaging service with TypeScript types
 
 ### Infrastructure
 - **Orchestration**: Google Kubernetes Engine (GKE)
 - **Container Registry**: Google Container Registry (GCR)
+- **Messaging**: Google Cloud Pub/Sub (asynchronous inter-service communication)
 - **CI/CD**: GitHub Actions (automated on push to `main`)
 - **Secrets**: Kubernetes Secrets
 
@@ -114,7 +192,12 @@ noclue/
 ├── common/                   # Shared GraphQL schema and types
 │   ├── src/
 │   │   ├── schema.graphql   # GraphQL schema definition
-│   │   └── index.ts         # TypeScript types
+│   │   ├── index.ts         # TypeScript types
+│   │   └── pubsub/          # Pub/Sub messaging module
+│   │       ├── types.ts     # Message schemas and topic constants
+│   │       ├── config.ts    # Pub/Sub configuration
+│   │       ├── pubsub.service.ts  # Reusable Pub/Sub service
+│   │       └── index.ts     # Module exports
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -128,7 +211,12 @@ noclue/
 ├── docs/                     # Documentation
 │   ├── SETUP.md             # Setup guide
 │   ├── TROUBLESHOOTING.md   # Debug guide
-│   └── DISASTER_RECOVERY.md # Emergency procedures
+│   ├── DISASTER_RECOVERY.md # Emergency procedures
+│   └── PUBSUB_INTEGRATION.md # Pub/Sub messaging guide
+│
+├── scripts/                  # Utility scripts
+│   ├── setup-pubsub.ts      # Initialize Pub/Sub topics & subscriptions
+│   └── cleanup-pubsub.ts    # Delete all Pub/Sub resources
 │
 ├── .github/
 │   └── workflows/
@@ -140,6 +228,7 @@ noclue/
 ├── Dockerfile.matching-service      # Matching service Docker image
 ├── Dockerfile.collaboration-service # Collaboration service Docker image
 ├── package.json                     # Root package.json (monorepo)
+├── PUBSUB_SETUP_SUMMARY.md          # Pub/Sub implementation summary
 └── README.md
 ```
 
@@ -158,7 +247,17 @@ npm install
 # Build common package
 npm run build:common
 
-# Set up environment variables (see docs/SETUP.md)
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Supabase and GCP credentials
+
+# Set up Pub/Sub (local emulator recommended for development)
+# Start Pub/Sub emulator in separate terminal:
+gcloud beta emulators pubsub start --project=local-dev
+
+# In another terminal, initialize topics and subscriptions:
+export PUBSUB_EMULATOR_HOST=localhost:8085
+npm run setup:pubsub
 
 # Run all services
 npm run dev
@@ -167,6 +266,8 @@ npm run dev
 Access:
 - Frontend: http://localhost:3000
 - Backend services: http://localhost:4001-4004/graphql
+
+**Note**: For Pub/Sub setup, see [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md)
 
 ### Building for Production
 
@@ -360,6 +461,10 @@ Monthly GKE costs (approximate):
 - Storage: ~$4/month
 - **Total: ~$72-145/month**
 
+Google Cloud Pub/Sub:
+- First 10GB/month: Free
+- Typical usage for this app: ~$0-5/month
+
 Supabase: Free tier available
 
 See [Setup Guide](./docs/SETUP.md) for cost optimization tips.
@@ -367,6 +472,7 @@ See [Setup Guide](./docs/SETUP.md) for cost optimization tips.
 ## Documentation
 
 - [Setup Guide](./docs/SETUP.md) - Complete setup and configuration
+- [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md) - Messaging architecture and setup
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Debug common issues
 - [Disaster Recovery Guide](./docs/DISASTER_RECOVERY.md) - Backups and emergency procedures
 
