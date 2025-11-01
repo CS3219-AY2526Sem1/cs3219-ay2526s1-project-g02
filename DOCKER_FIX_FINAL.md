@@ -243,13 +243,18 @@ RUN npm run build:common
 
 ### Attempt 4: THIS ONE (Correct!)
 ```dockerfile
-RUN npm install
+RUN npm install           # Root install - workspace setup
 RUN npm run build:common  # ✅ Build common FIRST
 WORKDIR service
-RUN npm install  # ✅ Now can find local @noclue/common
-RUN npm run build
+RUN npm install           # ✅ Now can find local @noclue/common
+RUN npm run build         # ✅ Service has all dependencies
 ```
 ✅ **Everything works!**
+
+**Critical**: The service-level `npm install` MUST come AFTER `npm run build:common`. This ensures:
+1. Common package is built and available
+2. Service can find @noclue/common locally (not from npm registry)
+3. All service-specific dependencies (@nestjs/config, etc.) are installed
 
 ---
 

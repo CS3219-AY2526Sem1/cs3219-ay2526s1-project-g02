@@ -18,8 +18,9 @@ RUN npm install
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Build user service (all dependencies already installed by root npm install)
+# Build user service (install service deps after common is built)
 WORKDIR /app/backend/services/user-service
+RUN npm install
 RUN npm run build
 
 # Stage 2: Production
