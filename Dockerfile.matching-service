@@ -7,6 +7,7 @@ COPY package*.json ./
 
 # Copy backend workspace configuration
 COPY backend/package*.json ./backend/
+COPY backend/tsconfig.json ./backend/tsconfig.json
 
 # Copy all workspace source files
 COPY common ./common
@@ -18,8 +19,11 @@ RUN npm install
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
 
-# Build matching service using workspace command (stays at root to maintain workspace context)
-RUN npm run build --workspace=@noclue/matching-service
+# Move to service directory for NestJS build (needs to find nest-cli.json and tsconfig.json)
+WORKDIR /app/backend/services/matching-service
+
+# Build service (dependencies already installed by root npm install, no npm install here!)
+RUN npm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
