@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run copy:schema",
+    "copy:schema": "node -e \"require('fs').copyFileSync('src/schema.graphql', 'dist/schema.graphql')\"",
     "watch": "tsc --watch",
     "clean": "rm -rf dist"
   },
