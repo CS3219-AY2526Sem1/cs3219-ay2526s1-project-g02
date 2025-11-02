@@ -6,14 +6,22 @@ This guide explains how to run the NoClue platform using Docker Compose with cen
 
 ### 1. Set up environment variables
 
-We use a **centralized `.env` file** in the root directory for all Docker services:
+Run the setup script to configure **both** Docker Compose and local development environments:
 
 ```bash
-# Copy the template
-cp .env.docker .env
-
-# OR use the setup script
 ./docker-setup.sh
+```
+
+This script will:
+- ✅ Create root `.env` for Docker Compose
+- ✅ Create `.env` files in each service directory for local development
+- ✅ Create `frontend/.env.local` for frontend development
+- ✅ Automatically populate all files with credentials from `.env.docker`
+
+**Manual alternative:**
+```bash
+# For Docker Compose only
+cp .env.docker .env
 ```
 
 ### 2. Review and update `.env`
@@ -189,6 +197,28 @@ docker-compose build frontend
 docker-compose ps redis
 docker-compose logs redis
 ```
+
+## Fresh Repository Setup
+
+If you're setting up the repository for the first time:
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd noclue
+
+# 2. Install dependencies
+npm install
+
+# 3. Run the setup script
+./docker-setup.sh
+
+# 4. Build and run
+docker-compose build
+docker-compose up
+```
+
+The setup script creates all necessary `.env` files from templates, so you don't need to manually copy any files!
 
 ## Local Development vs Docker
 
