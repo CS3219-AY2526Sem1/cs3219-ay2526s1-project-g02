@@ -43,15 +43,26 @@ ENV NODE_ENV=production
 # Copy root package.json for workspace structure
 COPY package*.json ./
 
-# Copy built common package
-COPY --from=builder /app/common ./common
+# Copy backend package.json
+COPY --from=builder /app/backend/package*.json ./backend/
 
-# Copy built user service and its dependencies
-COPY --from=builder /app/backend/services/user-service/dist ./backend/services/user-service/dist
+# Copy all service package.json files (needed for workspace resolution)
 COPY --from=builder /app/backend/services/user-service/package*.json ./backend/services/user-service/
+COPY --from=builder /app/backend/services/matching-service/package*.json ./backend/services/matching-service/
+COPY --from=builder /app/backend/services/question-service/package*.json ./backend/services/question-service/
+COPY --from=builder /app/backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
+
+# Copy common package.json
+COPY --from=builder /app/common/package*.json ./common/
+
+# Copy built common package
+COPY --from=builder /app/common/dist ./common/dist
+
+# Copy built user service
+COPY --from=builder /app/backend/services/user-service/dist ./backend/services/user-service/dist
 COPY --from=builder /app/backend/services/user-service/.env* ./backend/services/user-service/
 
-# Install production dependencies only
+# Install production dependencies only (now with proper workspace structure)
 RUN npm install --workspace=@noclue/common --workspace=@noclue/user-service --omit=dev
 
 EXPOSE 4001
