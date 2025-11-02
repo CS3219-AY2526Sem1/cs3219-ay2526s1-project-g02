@@ -80,14 +80,14 @@ start_services() {
 # Stop services
 stop_services() {
     echo -e "${BLUE}Stopping all services...${NC}"
-    docker-compose down
+    docker-compose --env-file .env.docker down
     echo -e "${GREEN}✓ All services stopped${NC}"
 }
 
 # Restart services
 restart_services() {
     echo -e "${BLUE}Restarting all services...${NC}"
-    docker-compose restart
+    docker-compose --env-file .env.docker restart
     echo -e "${GREEN}✓ All services restarted${NC}"
 }
 
@@ -110,15 +110,15 @@ rebuild_services() {
 # View logs
 view_logs() {
     if [ -z "$1" ]; then
-        docker-compose logs -f
+        docker-compose --env-file .env.docker logs -f
     else
-        docker-compose logs -f "$1"
+        docker-compose --env-file .env.docker logs -f "$1"
     fi
 }
 
 # Show running services
 show_status() {
-    docker-compose ps
+    docker-compose --env-file .env.docker ps
 }
 
 # Clean up everything
@@ -128,7 +128,7 @@ clean_services() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Cleaning up...${NC}"
-        docker-compose down -v
+        docker-compose --env-file .env.docker down -v
         echo -e "${GREEN}✓ Cleanup complete${NC}"
     else
         echo "Cancelled"
@@ -144,7 +144,7 @@ open_shell() {
         exit 1
     fi
 
-    docker-compose exec "$1" sh
+    docker-compose --env-file .env.docker exec "$1" sh
 }
 
 # Main command dispatcher
