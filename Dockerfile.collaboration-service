@@ -40,30 +40,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy root package.json for workspace structure
+# Copy workspace configuration
 COPY package*.json ./
-
-# Copy backend package.json
 COPY --from=builder /app/backend/package*.json ./backend/
 
-# Copy all service package.json files (needed for workspace resolution)
-COPY --from=builder /app/backend/services/user-service/package*.json ./backend/services/user-service/
-COPY --from=builder /app/backend/services/matching-service/package*.json ./backend/services/matching-service/
-COPY --from=builder /app/backend/services/question-service/package*.json ./backend/services/question-service/
-COPY --from=builder /app/backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
-
-# Copy common package.json
-COPY --from=builder /app/common/package*.json ./common/
-
-# Copy built common package
-COPY --from=builder /app/common/dist ./common/dist
+# Copy built common package with its node_modules
+COPY --from=builder /app/common ./common
 
 # Copy built collaboration service
 COPY --from=builder /app/backend/services/collaboration-service/dist ./backend/services/collaboration-service/dist
+COPY --from=builder /app/backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
 COPY --from=builder /app/backend/services/collaboration-service/.env* ./backend/services/collaboration-service/
 
-# Install production dependencies only (now with proper workspace structure)
-RUN npm install --workspace=@noclue/common --workspace=@noclue/collaboration-service --omit=dev
+# Copy node_modules from builder (includes all dependencies)
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 4004 1234
 
