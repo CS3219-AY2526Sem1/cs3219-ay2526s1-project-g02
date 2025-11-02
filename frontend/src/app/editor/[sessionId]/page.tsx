@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Editor from "@/lib/components/editor";
 import { useParams } from "next/navigation";
 import { WebSocketService } from "@/lib/services/web-socket-service";
+import { PageLayout } from "@/components/layout";
+import NavBar from "@/components/NavBar";
 
 export default function EditorPage() {
   const { sessionId: sessionIdParam } = useParams();
@@ -53,17 +55,22 @@ export default function EditorPage() {
     };
   }, [sessionId]);
 
+  //To add pagelayout here - fix UI if needed
   return webSocketService ? (
-    <div>
-      <h1>Collaborative Editor</h1>
-      <p>Session ID: {sessionId}</p>
-      <Editor
-        height={"90vh"}
-        defaultLanguage="javascript"
-        webSocketService={webSocketService}
-      />
-    </div>
+    <PageLayout header={<NavBar></NavBar>}>
+      <div>
+        <h1>Collaborative Editor</h1>
+        <p>Session ID: {sessionId}</p>
+        <Editor
+          height={"90vh"}
+          defaultLanguage="javascript"
+          webSocketService={webSocketService}
+        />
+      </div>
+    </PageLayout>
   ) : (
-    <div>Loading...</div>
+    <PageLayout header={<NavBar></NavBar>}>
+      <div>Loading...</div>
+    </PageLayout>
   );
 }

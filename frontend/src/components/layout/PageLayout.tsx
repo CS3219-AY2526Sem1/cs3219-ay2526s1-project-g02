@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface PageLayoutProps {
   header: React.ReactNode;
@@ -7,27 +7,39 @@ interface PageLayoutProps {
   className?: string;
 }
 
-export function PageLayout({ header, sidebar, children, className = '' }: PageLayoutProps) {
+export function PageLayout({
+  header,
+  sidebar,
+  children,
+  className = "",
+}: PageLayoutProps) {
   return (
-    <div className={`flex h-screen flex-col bg-white text-slate-900 ${className}`}>
-      {/* Header */}
-      {header}
+    <>
+      <div className="bg-white"> {header}</div>
 
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-6xl flex-1 overflow-hidden px-6 py-6">
-        {sidebar ? (
-          <div className="grid h-full gap-6 lg:grid-cols-[280px_1fr]">
-            {/* Sidebar */}
-            {sidebar}
+      <div
+        className={`flex min-h-screen flex-col bg-blue text-slate-900 ${className}`}
+      >
+        {/* Main Content */}
+        <main className="mx-auto w-full  h-full max-w-6xl flex-1  ">
+          {sidebar ? (
+            <div className="grid h-full gap-6 lg:grid-cols-[280px_1fr]">
+              {/* Sidebar */}
+              {sidebar}
 
-            {/* Main Content (scrollable) */}
-            <section className="h-full overflow-y-auto">{children}</section>
-          </div>
-        ) : (
-          // No sidebar layout
-          <div className="h-full overflow-y-auto">{children}</div>
-        )}
-      </main>
-    </div>
+              {/* Main Content (scrollable) */}
+              <section className="w-full mx-auto h-full overflow-y-auto">
+                {children}
+              </section>
+            </div>
+          ) : (
+            // No sidebar layout
+            <div className="flex items-center justify-center w-full min-h-screen overflow-y-auto">
+              {children}
+            </div>
+          )}
+        </main>
+      </div>
+    </>
   );
 }

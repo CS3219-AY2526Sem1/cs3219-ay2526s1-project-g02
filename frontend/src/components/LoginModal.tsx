@@ -107,13 +107,16 @@ export default function LoginModal() {
               </Link>
             </div>
 
-            <Button className="mt-4" onClick={(e) => handleLogin(e)}>
+            <Button
+              className="mt-4 cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+              onClick={(e) => handleLogin(e)}
+            >
               Login
             </Button>
 
-            <div className="flex flex-row justify-between">
+            <div className="flex gap-4 flex-row justify-between">
               <Button
-                className="w-[45%]"
+                className="w-[45%] cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
                 onClick={async (e) => {
                   e.preventDefault();
                   await supabase.auth.signInWithOAuth({
@@ -133,7 +136,7 @@ export default function LoginModal() {
               </Button>
 
               <Button
-                className="w-[45%] "
+                className="w-[45%] cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
                 onClick={async (e) => {
                   e.preventDefault();
                   await supabase.auth.signInWithOAuth({
@@ -144,10 +147,12 @@ export default function LoginModal() {
                   });
                 }}
               >
-                <div>
-                  <FaGithub></FaGithub>
+                <div className="flex flex-row justify-center items-center gap-2">
+                  <div>
+                    <FaGithub></FaGithub>
+                  </div>
+                  <div> Login with GitHub</div>
                 </div>
-                <div> Login with GitHub</div>
               </Button>
             </div>
             <div className="text-xs font-bold text-red-500">{error}</div>

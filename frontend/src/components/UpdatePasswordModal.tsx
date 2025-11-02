@@ -120,7 +120,10 @@ export default function UpdatePasswordModal() {
             </div>
             <div className="text-xs font-bold text-red-500">{error}</div>
 
-            <Button onClick={(e) => handleUpdatePassword(e)}>
+            <Button
+              className="cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+              onClick={(e) => handleUpdatePassword(e)}
+            >
               Update Password
             </Button>
           </form>

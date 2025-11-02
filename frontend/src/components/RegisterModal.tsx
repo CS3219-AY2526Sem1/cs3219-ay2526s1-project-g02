@@ -228,7 +228,10 @@ export default function RegisterModal() {
                 </div>
               </div>
 
-              <Button onClick={(e) => handleRegisterButton(e)} className="mt-5">
+              <Button
+                onClick={(e) => handleRegisterButton(e)}
+                className="mt-5 cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+              >
                 Register
               </Button>
             </form>
