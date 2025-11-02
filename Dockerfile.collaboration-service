@@ -9,12 +9,21 @@ COPY package*.json ./
 COPY backend/package*.json ./backend/
 COPY backend/tsconfig.json ./backend/tsconfig.json
 
-# Copy all workspace source files
-COPY common ./common
-COPY backend/services/collaboration-service ./backend/services/collaboration-service
+# Copy all service package.json files (needed for workspace resolution)
+COPY backend/services/user-service/package*.json ./backend/services/user-service/
+COPY backend/services/matching-service/package*.json ./backend/services/matching-service/
+COPY backend/services/question-service/package*.json ./backend/services/question-service/
+COPY backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
+
+# Copy common package.json
+COPY common/package*.json ./common/
 
 # Install ALL dependencies at root (sets up workspace links and installs all deps)
 RUN npm install
+
+# Now copy the actual source files
+COPY common ./common
+COPY backend/services/collaboration-service ./backend/services/collaboration-service
 
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
