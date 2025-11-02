@@ -61,4 +61,4 @@ lerna-debug.log*
 
 .claude/
 .documentation/
-supabase/
+supabase/.env.docker.local
