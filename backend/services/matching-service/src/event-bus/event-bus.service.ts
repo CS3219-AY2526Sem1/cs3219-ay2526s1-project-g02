@@ -36,9 +36,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
         this.logger.log('Initializing Event Bus Service...');
 
         // Subscribe to session events from Collaboration Service
-        await this.subscribeToSessionEvents();
-
-        this.logger.log('Event Bus Service initialized successfully');
+        try {
+            await this.subscribeToSessionEvents();
+            this.logger.log('Event Bus Service initialized successfully');
+        } catch (error) {
+            this.logger.warn('Event Bus Service initialization failed - running without Pub/Sub');
+            this.logger.warn('To enable Pub/Sub: Set PUBSUB_EMULATOR_HOST or configure GCP credentials');
+        }
     }
 
     async onModuleDestroy() {
@@ -63,18 +67,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      * Subscribe to session events from Collaboration Service
      */
     private async subscribeToSessionEvents(): Promise<void> {
-        try {
-            await this.pubsubService.subscribe<SessionEventPayload>(
-                SUBSCRIPTIONS.SESSION_QUEUE_SUB,
-                async (data) => {
-                    await this.handleSessionEvent(data);
-                }
-            );
-            this.logger.log(`Subscribed to ${SUBSCRIPTIONS.SESSION_QUEUE_SUB}`);
-        } catch (error) {
-            this.logger.error('Failed to subscribe to session events:', error);
-            throw error;
-        }
+        await this.pubsubService.subscribe<SessionEventPayload>(
+            SUBSCRIPTIONS.SESSION_QUEUE_SUB,
+            async (data) => {
+                await this.handleSessionEvent(data);
+            }
+        );
+        this.logger.log(`Subscribed to ${SUBSCRIPTIONS.SESSION_QUEUE_SUB}`);
     }
 
     /**

@@ -37,9 +37,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
         this.logger.log('Initializing Event Bus Service...');
 
         // Subscribe to match found events from Matching Service
-        await this.subscribeToMatchFoundEvents();
-
-        this.logger.log('Event Bus Service initialized successfully');
+        try {
+            await this.subscribeToMatchFoundEvents();
+            this.logger.log('Event Bus Service initialized successfully');
+        } catch (error) {
+            this.logger.warn('Event Bus Service initialization failed - running without Pub/Sub');
+            this.logger.warn('To enable Pub/Sub: Set PUBSUB_EMULATOR_HOST or configure GCP credentials');
+        }
     }
 
     async onModuleDestroy() {
@@ -59,18 +63,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      * Subscribe to match found events from Matching Service
      */
     private async subscribeToMatchFoundEvents(): Promise<void> {
-        try {
-            await this.pubsubService.subscribe<MatchFoundPayload>(
-                SUBSCRIPTIONS.MATCHING_QUEUE_SUB,
-                async (data) => {
-                    await this.handleMatchFound(data);
-                }
-            );
-            this.logger.log(`Subscribed to ${SUBSCRIPTIONS.MATCHING_QUEUE_SUB}`);
-        } catch (error) {
-            this.logger.error('Failed to subscribe to match found events:', error);
-            throw error;
-        }
+        await this.pubsubService.subscribe<MatchFoundPayload>(
+            SUBSCRIPTIONS.MATCHING_QUEUE_SUB,
+            async (data) => {
+                await this.handleMatchFound(data);
+            }
+        );
+        this.logger.log(`Subscribed to ${SUBSCRIPTIONS.MATCHING_QUEUE_SUB}`);
     }
 
     /**

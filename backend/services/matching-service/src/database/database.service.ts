@@ -8,7 +8,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
     constructor() {
         const url = process.env.SUPABASE_URL;
-        const key = process.env.SUPABASE_SECRET_KEY;
+        const key = process.env.SUPABASE_SERVICE_KEY;
         if (!url || !key) {
             this.logger.error("Supabase URL or Key is not defined in environment variables.");
         }

@@ -37,9 +37,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
         this.logger.log('Initializing Event Bus Service...');
 
         // Subscribe to question assigned events from Question Service
-        await this.subscribeToQuestionAssignedEvents();
-
-        this.logger.log('Event Bus Service initialized successfully');
+        try {
+            await this.subscribeToQuestionAssignedEvents();
+            this.logger.log('Event Bus Service initialized successfully');
+        } catch (error) {
+            this.logger.warn('Event Bus Service initialization failed - running without Pub/Sub');
+            this.logger.warn('To enable Pub/Sub: Set PUBSUB_EMULATOR_HOST or configure GCP credentials');
+        }
     }
 
     async onModuleDestroy() {
@@ -59,18 +63,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      * Subscribe to question assigned events from Question Service
      */
     private async subscribeToQuestionAssignedEvents(): Promise<void> {
-        try {
-            await this.pubsubService.subscribe<QuestionAssignedPayload>(
-                SUBSCRIPTIONS.QUESTION_QUEUE_SUB,
-                async (data) => {
-                    await this.handleQuestionAssigned(data);
-                }
-            );
-            this.logger.log(`Subscribed to ${SUBSCRIPTIONS.QUESTION_QUEUE_SUB}`);
-        } catch (error) {
-            this.logger.error('Failed to subscribe to question assigned events:', error);
-            throw error;
-        }
+        await this.pubsubService.subscribe<QuestionAssignedPayload>(
+            SUBSCRIPTIONS.QUESTION_QUEUE_SUB,
+            async (data) => {
+                await this.handleQuestionAssigned(data);
+            }
+        );
+        this.logger.log(`Subscribed to ${SUBSCRIPTIONS.QUESTION_QUEUE_SUB}`);
     }
 
     /**

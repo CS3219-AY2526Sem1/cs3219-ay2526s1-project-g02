@@ -45,6 +45,12 @@ spec:
           value: "http://collaboration-service.noclue-app.svc.cluster.local:4004"
         - name: CORS_ORIGIN
           value: "https://noclue.com"
+        - name: GCP_PROJECT_ID
+          value: "noclue-476404"
+        - name: REDIS_HOST
+          value: "10.175.68.99"
+        - name: REDIS_PORT
+          value: "6379"
         resources:
           requests:
             memory: "128Mi"

@@ -1,6 +1,37 @@
 version: '3.8'
 
 services:
+  # Redis (for matching queue)
+  redis:
+    image: redis:7.2-alpine
+    container_name: noclue-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - noclue-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Google Cloud Pub/Sub Emulator
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: noclue-pubsub-emulator
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+    networks:
+      - noclue-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # Backend Services
   user-service:
     build:
@@ -41,10 +72,14 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - GCP_PROJECT_ID=noclue-476404
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - USER_SERVICE_URL=http://user-service:4001
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - pubsub-emulator
     networks:
       - noclue-network
     healthcheck:
@@ -67,10 +102,17 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - GCP_PROJECT_ID=noclue-476404
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - pubsub-emulator
+      - redis
     networks:
       - noclue-network
     healthcheck:
@@ -95,10 +137,14 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - GCP_PROJECT_ID=noclue-476404
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - pubsub-emulator
     networks:
       - noclue-network
     healthcheck:
