@@ -109,37 +109,17 @@ describe('QuestionsService - Unit Tests', () => {
         .mockResolvedValueOnce([chosenQuestion])
         .mockResolvedValue([]);
 
-      jest.spyOn(service, 'getTestCasesForQuestion').mockResolvedValue([
-        {
-          id: 'tc1',
-          questionId: 'q1',
-          input: { nums: [2, 7, 11, 15] },
-          expectedOutput: { indexes: [0, 1] },
-          isHidden: false,
-          orderIndex: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ]);
-
       await matchHandler(matchPayload);
 
       expect(findRandomQuestionsSpy).toHaveBeenCalledWith(1, 'Easy', ['Array']);
-      expect(eventBusServiceMock.publishQuestionAssigned).toHaveBeenCalledWith(
-        expect.objectContaining({
-          matchId: 'match-123',
-          user1Id: 'user-a',
-          user2Id: 'user-b',
-          questionId: 'q1',
-          questionTitle: 'Two Sum',
-          difficulty: 'easy',
-          testCases: [
-            expect.objectContaining({
-              id: 'tc1',
-            }),
-          ],
-        }),
-      );
+      expect(eventBusServiceMock.publishQuestionAssigned).toHaveBeenCalledWith({
+        matchId: 'match-123',
+        questionId: 'q1',
+        questionTitle: 'Two Sum',
+        questionDescription: 'Find two numbers',
+        difficulty: 'easy',
+        topics: ['Array'],
+      });
     });
   });
 

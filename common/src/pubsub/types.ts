@@ -23,23 +23,11 @@ export interface MatchFoundPayload {
  */
 export interface QuestionAssignedPayload {
     matchId: string;
-    sessionId?: string;
-    user1Id: string;
-    user2Id: string;
     questionId: string;
     questionTitle: string;
     questionDescription: string;
     difficulty: 'easy' | 'medium' | 'hard';
     topics: string[];
-    testCases: QuestionTestCasePayload[];
-}
-
-export interface QuestionTestCasePayload {
-    id: string;
-    input: any;
-    expectedOutput: any;
-    isHidden: boolean;
-    orderIndex: number;
 }
 
 /**

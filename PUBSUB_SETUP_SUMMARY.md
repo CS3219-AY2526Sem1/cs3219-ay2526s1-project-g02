@@ -12,8 +12,8 @@
 
 #### Matching Service
 - ✅ Replaced stub event-bus with real Pub/Sub implementation
-- ✅ Publishes to `matching-queue` when match is found
-- ✅ Subscribes to `session-queue-sub` for session events from Collaboration Service
+- ✅ Publishes to `matching-queue` when a match is found
+- ✅ Subscribes to `session-queue-sub` for session lifecycle updates
 - **File**: `backend/services/matching-service/src/event-bus/event-bus.service.ts`
 
 #### Question Service
