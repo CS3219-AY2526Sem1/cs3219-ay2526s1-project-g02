@@ -92,10 +92,6 @@ main() {
     log_step "Step 4: Creating/Updating Kubernetes secrets..."
     create_secrets
 
-    # Step 5: Update manifests with PROJECT_ID
-    log_step "Step 5: Preparing deployment manifests..."
-    prepare_manifests
-
     # Step 6: Apply Services
     log_step "Step 6: Applying Kubernetes Services..."
     apply_services
