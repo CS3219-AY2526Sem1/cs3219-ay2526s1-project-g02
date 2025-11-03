@@ -1,6 +1,7 @@
 import 'dotenv/config';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
+import { QuestionAssignedPayload } from '@noclue/common';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -9,6 +10,8 @@ const supabase = createClient(
 
 @Injectable()
 export class CollaborationService {
+  private readonly logger = new Logger(CollaborationService.name);
+
   async createSession(matchId: string) {
     const { data, error } = await supabase
       .from('sessions')
@@ -17,6 +20,37 @@ export class CollaborationService {
       .single();
 
     if (error) throw new Error(`Failed to create session: ${error.message}`);
+    return data;
+  }
+
+  /**
+   * Create a session from QuestionAssigned event
+   */
+  async createSessionFromQuestion(payload: QuestionAssignedPayload) {
+    this.logger.log(`Creating session for match ${payload.matchId} with question ${payload.questionId}`);
+
+    this.logger.log(`Question: ${JSON.stringify(payload)}`);
+    
+    const sessionData = {
+      match_id: payload.matchId,
+      question_id: payload.questionId,
+      code: `// ${payload.questionTitle}\n// Difficulty: ${payload.difficulty}\n\n`,
+      language: 'javascript',
+      status: 'active',
+    };
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .insert([sessionData])
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create session: ${error.message}`);
+      throw new Error(`Failed to create session: ${error.message}`);
+    }
+
+    this.logger.log(`Session created successfully: ${data.id}`);
     return data;
   }
 

@@ -8,6 +8,9 @@ export class SessionType {
   @Field()
   match_id: string;
 
+  @Field({ nullable: true })
+  question_id?: string;
+
   @Field()
   code: string;
 
