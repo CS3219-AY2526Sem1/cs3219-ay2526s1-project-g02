@@ -47,7 +47,10 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            <Button onClick={(e) => handleResetPassword(e)}>
+            <Button
+              className="mt-4 cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+              onClick={(e) => handleResetPassword(e)}
+            >
               Reset Password
             </Button>
           </form>

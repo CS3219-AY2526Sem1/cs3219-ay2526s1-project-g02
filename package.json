@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
-    "dev:backend": "npm run start:dev --workspace=backend",
+    "dev:backend": "npm run dev:services --workspace=backend",
     "dev:user": "npm run start:dev --workspace=@noclue/user-service",
     "dev:matching": "npm run start:dev --workspace=@noclue/matching-service",
     "dev:question": "npm run start:dev --workspace=@noclue/question-service",

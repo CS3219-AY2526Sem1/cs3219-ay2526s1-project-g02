@@ -1,11 +1,13 @@
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
+import { PageLayout } from "@/components/layout";
+import NavBar from "@/components/NavBar";
 
 export default function ForgotPasswordPage() {
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f3f4f6] via-[#e5e7eb] to-[#d1d5db] p-4">
+      <PageLayout header={<NavBar></NavBar>}>
         <ForgotPasswordModal />
-      </div>
+      </PageLayout>
     </>
   );
 }

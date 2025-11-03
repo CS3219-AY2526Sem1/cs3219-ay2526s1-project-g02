@@ -22,9 +22,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ApolloWrapper>
           <AuthProvider>
-            <NavBar />
-
-            {children}
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+              {children}
+            </div>
           </AuthProvider>
         </ApolloWrapper>
       </body>
