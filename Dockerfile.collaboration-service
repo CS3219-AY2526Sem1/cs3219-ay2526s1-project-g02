@@ -9,12 +9,21 @@ COPY package*.json ./
 COPY backend/package*.json ./backend/
 COPY backend/tsconfig.json ./backend/tsconfig.json
 
-# Copy all workspace source files
-COPY common ./common
-COPY backend/services/collaboration-service ./backend/services/collaboration-service
+# Copy all service package.json files (needed for workspace resolution)
+COPY backend/services/user-service/package*.json ./backend/services/user-service/
+COPY backend/services/matching-service/package*.json ./backend/services/matching-service/
+COPY backend/services/question-service/package*.json ./backend/services/question-service/
+COPY backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
+
+# Copy common package.json
+COPY common/package*.json ./common/
 
 # Install ALL dependencies at root (sets up workspace links and installs all deps)
 RUN npm install
+
+# Now copy the actual source files
+COPY common ./common
+COPY backend/services/collaboration-service ./backend/services/collaboration-service
 
 # Build common package FIRST (makes it available as local package)
 RUN npm run build:common
@@ -31,19 +40,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy root package.json for workspace structure
+# Copy workspace configuration
 COPY package*.json ./
+COPY --from=builder /app/backend/package*.json ./backend/
 
-# Copy built common package
+# Copy built common package with its node_modules
 COPY --from=builder /app/common ./common
 
-# Copy built collaboration service and its dependencies
+# Copy built collaboration service
 COPY --from=builder /app/backend/services/collaboration-service/dist ./backend/services/collaboration-service/dist
 COPY --from=builder /app/backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
 COPY --from=builder /app/backend/services/collaboration-service/.env* ./backend/services/collaboration-service/
 
-# Install production dependencies only
-RUN npm install --workspace=@noclue/common --workspace=@noclue/collaboration-service --omit=dev
+# Copy node_modules from builder (includes all dependencies)
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 4004 1234
 

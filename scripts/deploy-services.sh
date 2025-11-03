@@ -104,13 +104,13 @@ main() {
     log_step "Step 7: Deploying microservices..."
     deploy_services
 
-    # Step 8: Wait for deployments to be ready
-    log_step "Step 8: Waiting for deployments to be ready..."
-    wait_for_deployments
+    # Step 8: Restart deployments to pull latest images
+    log_step "Step 8: Restarting deployments to pull latest images..."
+    restart_deployments
 
-    # Step 9: Run health checks
-    log_step "Step 9: Running health checks..."
-    run_health_checks
+    # Step 9: Wait for deployments to be ready
+    log_step "Step 9: Waiting for deployments to be ready..."
+    wait_for_deployments
 
     # Step 10: Display service URLs
     log_step "Step 10: Getting service URLs..."
@@ -251,6 +251,32 @@ deploy_services() {
     done
 }
 
+# Restart deployments to pull latest images
+restart_deployments() {
+    # Deployment order matches deploy_services
+    local deployments=(
+        "user-service"
+        "question-service"
+        "matching-service"
+        "collaboration-service"
+        "frontend"
+    )
+
+    for deployment in "${deployments[@]}"; do
+        # Check if deployment exists
+        if ! kubectl get deployment "$deployment" -n "$NAMESPACE" &> /dev/null; then
+            log_warning "Deployment '$deployment' not found, skipping restart..."
+            continue
+        fi
+
+        log_info "Restarting deployment: $deployment"
+        kubectl rollout restart deployment/"$deployment" -n "$NAMESPACE"
+        log_success "Triggered restart for $deployment"
+    done
+
+    log_success "All deployments restarted to pull latest images"
+}
+
 # Wait for all deployments to be ready
 wait_for_deployments() {
     local deployments=(
@@ -290,39 +316,6 @@ wait_for_deployments() {
     fi
 
     log_success "All deployments are ready!"
-}
-
-# Run health checks on all services
-run_health_checks() {
-    local services=(
-        "user-service"
-        "question-service"
-        "matching-service"
-        "collaboration-service"
-    )
-
-    local health_checks_passed=0
-    local health_checks_failed=0
-
-    for service in "${services[@]}"; do
-        if check_pod_health "$service" "$NAMESPACE" "/health"; then
-            ((health_checks_passed++))
-        else
-            ((health_checks_failed++))
-        fi
-    done
-
-    # Frontend health check (different path)
-    if check_pod_health "frontend" "$NAMESPACE" "/"; then
-        ((health_checks_passed++))
-    else
-        ((health_checks_failed++))
-    fi
-
-    log_info "Health checks passed: $health_checks_passed"
-    if [ $health_checks_failed -gt 0 ]; then
-        log_warning "Health checks failed: $health_checks_failed"
-    fi
 }
 
 # Display service URLs

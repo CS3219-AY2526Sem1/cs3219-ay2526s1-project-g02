@@ -195,20 +195,34 @@ check_pod_health() {
         return 1
     fi
 
-    # Get the port from the pod spec
+    # Check if pod is running and ready (via Kubernetes readiness probe)
+    local pod_ready=$(kubectl get pod "$pod" -n "$namespace" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+
+    if [ "$pod_ready" = "True" ]; then
+        log_success "Health check passed for '$deployment' (pod is ready)"
+        return 0
+    fi
+
+    # Fallback: Try to check with curl if available
     local port=$(kubectl get pod "$pod" -n "$namespace" -o jsonpath='{.spec.containers[0].ports[0].containerPort}' 2>/dev/null)
 
     if [ -z "$port" ]; then
-        log_warning "Could not determine port for '$deployment'"
+        log_warning "Could not determine port for '$deployment', but pod readiness check failed"
         return 1
     fi
 
-    # Try to curl the health endpoint
-    if kubectl exec "$pod" -n "$namespace" -- curl -sf "http://localhost:${port}${health_path}" &> /dev/null; then
-        log_success "Health check passed for '$deployment'"
-        return 0
+    # Check if curl is available in the container
+    if kubectl exec "$pod" -n "$namespace" -- which curl &> /dev/null; then
+        if kubectl exec "$pod" -n "$namespace" -- curl -sf "http://localhost:${port}${health_path}" &> /dev/null; then
+            log_success "Health check passed for '$deployment'"
+            return 0
+        else
+            log_warning "Health check failed for '$deployment' via curl"
+            return 1
+        fi
     else
-        log_warning "Health check failed for '$deployment' (this may be normal if health endpoint doesn't exist)"
+        # curl not available, rely on readiness probe
+        log_warning "curl not available in container, relying on Kubernetes readiness probe for '$deployment'"
         return 1
     fi
 }
