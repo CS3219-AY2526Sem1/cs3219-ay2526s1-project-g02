@@ -19,11 +19,6 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "baseUrl": "./",
-    "rootDirs": ["./src", "../../../common/src"],
-    "paths": {
-      "@noclue/common": ["../../../common/src"],
-      "@noclue/common/*": ["../../../common/src/*"]
-    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
