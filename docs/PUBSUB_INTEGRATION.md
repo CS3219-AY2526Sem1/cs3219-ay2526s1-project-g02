@@ -70,13 +70,25 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
 - **Purpose**: Notify when a question has been assigned to a match
 - **Message Schema**:
   ```typescript
+  interface QuestionTestCasePayload {
+    id: string;
+    input: unknown;
+    expectedOutput: unknown;
+    isHidden: boolean;
+    orderIndex: number;
+  }
+
   interface QuestionAssignedPayload {
     matchId: string;
+    sessionId?: string;
+    user1Id: string;
+    user2Id: string;
     questionId: string;
     questionTitle: string;
     questionDescription: string;
     difficulty: 'easy' | 'medium' | 'hard';
     topics: string[];
+    testCases: QuestionTestCasePayload[];
   }
   ```
 

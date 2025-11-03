@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QuestionsService } from './questions.service';
 import { createClient } from '@supabase/supabase-js';
+import { QuestionsService } from './questions.service';
+import { EventBusService } from '../event-bus/event-bus.service';
+import { MatchFoundPayload } from '@noclue/common';
 
 // Mock the Supabase client
 jest.mock('@supabase/supabase-js', () => ({
@@ -10,6 +12,10 @@ jest.mock('@supabase/supabase-js', () => ({
 describe('QuestionsService - Unit Tests', () => {
   let service: QuestionsService;
   let mockSupabaseClient: any;
+  let eventBusServiceMock: {
+    registerMatchFoundHandler: jest.Mock;
+    publishQuestionAssigned: jest.Mock;
+  };
 
   const mockQuestion = {
     id: '1',
@@ -41,12 +47,25 @@ describe('QuestionsService - Unit Tests', () => {
 
     (createClient as jest.Mock).mockReturnValue(mockSupabaseClient);
 
+    eventBusServiceMock = {
+      registerMatchFoundHandler: jest.fn(),
+      publishQuestionAssigned: jest.fn(),
+    };
+
     process.env.SUPABASE_URL = 'https://test.supabase.co';
     process.env.SUPABASE_KEY = 'test-key';
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [QuestionsService],
+      providers: [
+        QuestionsService,
+        {
+          provide: EventBusService,
+          useValue: eventBusServiceMock,
+        },
+      ],
     }).compile();
+
+    await module.init();
 
     service = module.get<QuestionsService>(QuestionsService);
   });
@@ -57,6 +76,71 @@ describe('QuestionsService - Unit Tests', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+    expect(eventBusServiceMock.registerMatchFoundHandler).toHaveBeenCalledTimes(1);
+  });
+
+  describe('handleMatchFound', () => {
+    it('publishes question assignment when a suitable question is found', async () => {
+      const matchHandler = eventBusServiceMock.registerMatchFoundHandler.mock.calls[0][0] as (
+        payload: MatchFoundPayload,
+      ) => Promise<void>;
+
+      const matchPayload: MatchFoundPayload = {
+        matchId: 'match-123',
+        user1Id: 'user-a',
+        user2Id: 'user-b',
+        difficulty: 'easy',
+        language: 'javascript',
+        commonTopics: ['Array'],
+      };
+
+      const chosenQuestion = {
+        id: 'q1',
+        title: 'Two Sum',
+        description: 'Find two numbers',
+        difficulty: 'Easy',
+        category: ['Array'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const findRandomQuestionsSpy = jest
+        .spyOn(service, 'findRandomQuestions')
+        .mockResolvedValueOnce([chosenQuestion])
+        .mockResolvedValue([]);
+
+      jest.spyOn(service, 'getTestCasesForQuestion').mockResolvedValue([
+        {
+          id: 'tc1',
+          questionId: 'q1',
+          input: { nums: [2, 7, 11, 15] },
+          expectedOutput: { indexes: [0, 1] },
+          isHidden: false,
+          orderIndex: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
+      await matchHandler(matchPayload);
+
+      expect(findRandomQuestionsSpy).toHaveBeenCalledWith(1, 'Easy', ['Array']);
+      expect(eventBusServiceMock.publishQuestionAssigned).toHaveBeenCalledWith(
+        expect.objectContaining({
+          matchId: 'match-123',
+          user1Id: 'user-a',
+          user2Id: 'user-b',
+          questionId: 'q1',
+          questionTitle: 'Two Sum',
+          difficulty: 'easy',
+          testCases: [
+            expect.objectContaining({
+              id: 'tc1',
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   describe('findAll', () => {

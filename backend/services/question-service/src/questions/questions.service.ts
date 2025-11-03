@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { MatchFoundPayload } from '@noclue/common';
+import { EventBusService } from '../event-bus/event-bus.service';
 
 export interface TestCase {
   id: string;
@@ -45,15 +47,24 @@ export interface UpdateQuestionInput {
 }
 
 @Injectable()
-export class QuestionsService {
+export class QuestionsService implements OnModuleInit {
   private readonly tableName = 'questions';
   private readonly supabase: SupabaseClient;
+  private readonly logger = new Logger(QuestionsService.name);
 
-  constructor() {
+  constructor(private readonly eventBusService: EventBusService) {
     this.supabase = createClient(
       process.env.SUPABASE_URL || '',
       process.env.SUPABASE_KEY || '',
     );
+  }
+
+  async onModuleInit(): Promise<void> {
+    this.eventBusService.registerMatchFoundHandler(async (payload) => {
+      await this.handleMatchFound(payload);
+    });
+
+    this.logger.log('Match found handler registered for question assignments');
   }
 
   async findAll(): Promise<Question[]> {
@@ -158,7 +169,7 @@ export class QuestionsService {
 
       return selected.map(this.mapToQuestion);
     } catch (err) {
-      console.error('Find random questions error:', err);
+      this.logger.error('Find random questions error:', err as Error);
       throw new Error(`Failed to retrieve random questions: ${err}`);
     }
   }
@@ -195,9 +206,114 @@ export class QuestionsService {
 
       return (data || []).map(this.mapToTestCase);
     } catch (err) {
-      console.error('Get test cases error:', err);
+      this.logger.error('Get test cases error:', err as Error);
       throw new Error(`Failed to retrieve test cases: ${err}`);
     }
+  }
+
+  /**
+   * Handle match found event by selecting a question and publishing it.
+   */
+  private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
+    this.logger.log(`Selecting question for match ${payload.matchId}`);
+
+    try {
+      const question = await this.pickQuestionForMatch(payload);
+
+      if (!question) {
+        this.logger.error(`No suitable question found for match ${payload.matchId}`);
+        return;
+      }
+
+      const testCases = await this.getTestCasesForQuestion(question.id);
+
+      await this.eventBusService.publishQuestionAssigned({
+        matchId: payload.matchId,
+        user1Id: payload.user1Id,
+        user2Id: payload.user2Id,
+        questionId: question.id,
+        questionTitle: question.title,
+        questionDescription: question.description,
+        difficulty: this.normalizeDifficultyForPayload(question.difficulty),
+        topics: question.category,
+        testCases: testCases.map((testCase) => ({
+          id: testCase.id,
+          input: testCase.input,
+          expectedOutput: testCase.expectedOutput,
+          isHidden: testCase.isHidden,
+          orderIndex: testCase.orderIndex,
+        })),
+      });
+
+      this.logger.log(`Published question ${question.id} for match ${payload.matchId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish question for match ${payload.matchId}`,
+        error as Error,
+      );
+    }
+  }
+
+  /**
+   * Determine a suitable question for the match using fallback strategies.
+   */
+  private async pickQuestionForMatch(payload: MatchFoundPayload): Promise<Question | null> {
+    const normalizedDifficulty = this.normalizeDifficultyForQuery(payload.difficulty);
+    const topics = Array.isArray(payload.commonTopics)
+      ? payload.commonTopics.filter(Boolean)
+      : [];
+
+    const strategies: Array<{ difficulty?: string; categories?: string[] }> = [
+      { difficulty: normalizedDifficulty, categories: topics },
+      { difficulty: normalizedDifficulty },
+      {},
+    ];
+
+    for (const strategy of strategies) {
+      const questions = await this.findRandomQuestions(
+        1,
+        strategy.difficulty,
+        strategy.categories && strategy.categories.length > 0 ? strategy.categories : undefined,
+      );
+
+      if (questions.length > 0) {
+        return questions[0];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Normalize difficulty strings for Supabase queries.
+   */
+  private normalizeDifficultyForQuery(
+    difficulty: MatchFoundPayload['difficulty'],
+  ): string {
+    switch (difficulty) {
+      case 'easy':
+        return 'Easy';
+      case 'medium':
+        return 'Medium';
+      case 'hard':
+        return 'Hard';
+      default:
+        return difficulty;
+    }
+  }
+
+  /**
+   * Normalize difficulty strings for payload emission.
+   */
+  private normalizeDifficultyForPayload(difficulty: string): MatchFoundPayload['difficulty'] {
+    const normalized = difficulty.toLowerCase();
+
+    if (normalized === 'easy' || normalized === 'medium' || normalized === 'hard') {
+      return normalized;
+    }
+
+    this.logger.warn(`Unexpected difficulty value "${difficulty}", defaulting to "medium"`);
+    return 'medium';
   }
 
   /**
@@ -229,7 +345,7 @@ export class QuestionsService {
 
       return testCasesByQuestion;
     } catch (err) {
-      console.error('Get test cases for questions error:', err);
+      this.logger.error('Get test cases for questions error:', err as Error);
       throw new Error(`Failed to retrieve test cases for questions: ${err}`);
     }
   }
