@@ -36,6 +36,11 @@ spec:
           valueFrom:
             secretKeyRef:
               name: supabase-secrets
+              key: SUPABASE_PUBLISHABLE_KEY
+        - name: SUPABASE_SERVICE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: supabase-secrets
               key: SUPABASE_SECRET_KEY
         - name: QUESTION_SERVICE_URL
           value: "http://question-service.noclue-app.svc.cluster.local:4002"
