@@ -104,8 +104,8 @@ services:
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
@@ -159,6 +159,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${SUPABASE_KEY}
+        - NEXT_PUBLIC_GRAPHQL_URL=${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost:4001/graphql}
+        - NEXT_PUBLIC_QUESTION_GRAPHQL_URL=${NEXT_PUBLIC_QUESTION_GRAPHQL_URL:-http://localhost:4002/graphql}
+        - NEXT_PUBLIC_MATCHING_GRAPHQL_URL=${NEXT_PUBLIC_MATCHING_GRAPHQL_URL:-http://localhost:4003/graphql}
+        - NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL=${NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL:-http://localhost:4004/graphql}
     container_name: noclue-frontend
     ports:
       - "3000:3000"

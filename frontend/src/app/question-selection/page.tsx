@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useQuery } from '@apollo/client';
-import { GET_QUESTIONS } from '@/lib/queries';
-import { useState } from 'react';
+import { useQuery } from "@apollo/client";
+import { GET_QUESTIONS } from "@/lib/queries";
+import { useState } from "react";
 import {
   Button,
   Card,
@@ -12,8 +12,9 @@ import {
   DifficultyBadge,
   UserCard,
   Loading,
-} from '@/components/ui';
-import { PageLayout, Sidebar, PageHeader } from '@/components/layout';
+} from "@/components/ui";
+import { PageLayout, Sidebar, PageHeader } from "@/components/layout";
+import NavBar from "@/components/NavBar";
 
 interface Question {
   id: string;
@@ -35,20 +36,20 @@ export default function SessionPage() {
   // Mock users data - replace with actual data from your backend
   const users: User[] = [
     {
-      username: '@juliusagambe',
-      role: 'React Dev',
-      joinedDate: 'Joined December 2021',
+      username: "@juliusagambe",
+      role: "React Dev",
+      joinedDate: "Joined December 2021",
     },
     {
-      username: '@alfredchen',
-      role: 'Java lover',
-      joinedDate: 'Joined December 2021',
+      username: "@alfredchen",
+      role: "Java lover",
+      joinedDate: "Joined December 2021",
     },
   ];
 
   if (loading) {
     return (
-      <PageLayout header={<PageHeader title="No Clue" />}>
+      <PageLayout header={<NavBar></NavBar>}>
         <Loading message="Loading questions..." />
       </PageLayout>
     );
@@ -56,7 +57,7 @@ export default function SessionPage() {
 
   if (error) {
     return (
-      <PageLayout header={<PageHeader title="No Clue" />}>
+      <PageLayout header={<NavBar></NavBar>}>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <div className="text-red-600">Error: {error.message}</div>
         </div>
@@ -72,7 +73,12 @@ export default function SessionPage() {
       {/* Participants */}
       <div className="space-y-3">
         {users.map((user, index) => (
-          <UserCard key={index} username={user.username} role={user.role} joinedDate={user.joinedDate} />
+          <UserCard
+            key={index}
+            username={user.username}
+            role={user.role}
+            joinedDate={user.joinedDate}
+          />
         ))}
       </div>
 
@@ -87,7 +93,9 @@ export default function SessionPage() {
   return (
     <PageLayout
       header={<PageHeader title="No Clue" />}
-      sidebar={<Sidebar title="Select Question:" bottomContent={sidebarBottom} />}
+      sidebar={
+        <Sidebar title="Select Question:" bottomContent={sidebarBottom} />
+      }
     >
       {/* Questions List */}
       <div className="space-y-4">
@@ -100,7 +108,9 @@ export default function SessionPage() {
             <CardHeader>
               <CardTitle>{question.title}</CardTitle>
               <CardContent>
-                <span className="font-normal">Topics: {question.category.join(', ')}</span>
+                <span className="font-normal">
+                  Topics: {question.category.join(", ")}
+                </span>
               </CardContent>
               <div className="flex items-center gap-2">
                 <DifficultyBadge difficulty={question.difficulty} />

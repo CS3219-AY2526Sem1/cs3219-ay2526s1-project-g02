@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import SettingsModal from "./SettingsModal";
 import { useState } from "react";
+import { Code2 } from "lucide-react";
 
 export default function NavBar() {
   const { session, setSession, loading } = useAuth();
@@ -18,20 +19,6 @@ export default function NavBar() {
   async function handleLogOut(e: React.FormEvent) {
     e.preventDefault();
     try {
-      //   const { data } = await supabase.auth.getSession();
-      //   const access_token = data.session?.access_token;
-
-      //   console.log("ACCESS TOKEN ON LOGOUT:", access_token);
-
-      //   const res = await fetch("http://localhost:4001/users/signout", {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ access_token }),
-      //   });
-
-      //   const result = await res.json();
-      //   console.log(result.message || "Signout response:", result);
-
       await supabase.auth.signOut();
       setSession(null);
 
@@ -51,36 +38,50 @@ export default function NavBar() {
 
   return (
     <>
-      <nav className="w-full border-b bg-background">
-        <div className="mx-auto flex max-w-6xl items-center justify-between p-4">
-          <Link href="/" className="text-xl font-semibold hover:text-primary">
-            NoClue
+      {/* Navigation */}
+      <nav className="container mx-auto px-6 py-6">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="text-2xl font-bold text-slate-800">
+            <div className="flex  items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Code2 className="w-6 h-6 text-white" />
+              </div>
+              <div>NoClue</div>
+            </div>
           </Link>
 
           <div className="flex gap-3">
             {!session ? (
               <>
                 <Link href="/login">
-                  <Button variant="outline">Login</Button>
+                  <Button variant="outline" className="cursor-pointer">
+                    Login
+                  </Button>
                 </Link>
                 <Link href="/register">
-                  <Button>Register</Button>
+                  <Button className="cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold ">
+                    Register
+                  </Button>
                 </Link>
               </>
             ) : (
               <>
-                <Button
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="cursor-pointer"
-                >
-                  My Account
-                </Button>
-                <Button
-                  className="cursor-pointer"
-                  onClick={(e) => handleLogOut(e)}
-                >
-                  Logout
-                </Button>
+                <div>
+                  <Button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+                  >
+                    My Account
+                  </Button>
+                </div>
+                <div>
+                  <Button
+                    className="cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+                    onClick={(e) => handleLogOut(e)}
+                  >
+                    Logout
+                  </Button>
+                </div>
               </>
             )}
           </div>

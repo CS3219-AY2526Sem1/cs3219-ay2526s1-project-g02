@@ -32,7 +32,7 @@ spec:
           value: "4003"
         - name: NODE_ENV
           value: "production"
-        - name: SUPABASE_KEY
+        - name: SUPABASE_SERVICE_KEY
           valueFrom:
             secretKeyRef:
               name: supabase-secrets
