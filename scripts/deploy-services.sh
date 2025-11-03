@@ -167,33 +167,33 @@ create_secrets() {
 }
 
 # Prepare deployment manifests (replace PROJECT_ID placeholder)
-prepare_manifests() {
-    if [ -z "$PROJECT_ID" ]; then
-        log_warning "PROJECT_ID not set. Manifests will use 'PROJECT_ID' placeholder"
-        log_info "Set PROJECT_ID with: export GCP_PROJECT_ID='your-project-id'"
-        log_info "Or use: ./deploy-services.sh --project-id your-project-id"
-        log_warning "Continuing with placeholder - this will work if images are already tagged correctly"
-    else
-        log_info "Using PROJECT_ID: $PROJECT_ID"
+# prepare_manifests() {
+#     if [ -z "$PROJECT_ID" ]; then
+#         log_warning "PROJECT_ID not set. Manifests will use 'PROJECT_ID' placeholder"
+#         log_info "Set PROJECT_ID with: export GCP_PROJECT_ID='your-project-id'"
+#         log_info "Or use: ./deploy-services.sh --project-id your-project-id"
+#         log_warning "Continuing with placeholder - this will work if images are already tagged correctly"
+#     else
+#         log_info "Using PROJECT_ID: $PROJECT_ID"
 
-        # Create temporary directory for modified manifests
-        TEMP_DIR=$(mktemp -d)
-        trap "rm -rf $TEMP_DIR" EXIT
+#         # Create temporary directory for modified manifests
+#         TEMP_DIR=$(mktemp -d)
+#         trap "rm -rf $TEMP_DIR" EXIT
 
-        # Copy manifests and replace PROJECT_ID
-        for file in "$K8S_DIR"/*-deployment.yaml; do
-            if [ -f "$file" ]; then
-                filename=$(basename "$file")
-                cp "$file" "$TEMP_DIR/$filename"
-                replace_placeholder "$TEMP_DIR/$filename" "PROJECT_ID" "$PROJECT_ID"
-                log_info "Prepared manifest: $filename"
-            fi
-        done
+#         # Copy manifests and replace PROJECT_ID
+#         for file in "$K8S_DIR"/*-deployment.yaml; do
+#             if [ -f "$file" ]; then
+#                 filename=$(basename "$file")
+#                 cp "$file" "$TEMP_DIR/$filename"
+#                 replace_placeholder "$TEMP_DIR/$filename" "PROJECT_ID" "$PROJECT_ID"
+#                 log_info "Prepared manifest: $filename"
+#             fi
+#         done
 
-        # Update K8S_DIR to point to temp directory
-        K8S_DIR="$TEMP_DIR"
-    fi
-}
+#         # Update K8S_DIR to point to temp directory
+#         K8S_DIR="$TEMP_DIR"
+#     fi
+# }
 
 # Apply Kubernetes Services
 apply_services() {
