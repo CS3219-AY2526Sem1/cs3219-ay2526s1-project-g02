@@ -109,6 +109,19 @@ describe('QuestionsService - Unit Tests', () => {
         .mockResolvedValueOnce([chosenQuestion])
         .mockResolvedValue([]);
 
+      jest.spyOn(service, 'getTestCasesForQuestion').mockResolvedValue([
+        {
+          id: 'tc1',
+          questionId: 'q1',
+          input: { nums: [2, 7, 11, 15] },
+          expectedOutput: { indexes: [0, 1] },
+          isHidden: false,
+          orderIndex: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
       await matchHandler(matchPayload);
 
       expect(findRandomQuestionsSpy).toHaveBeenCalledWith(1, 'Easy', ['Array']);
@@ -119,6 +132,15 @@ describe('QuestionsService - Unit Tests', () => {
         questionDescription: 'Find two numbers',
         difficulty: 'easy',
         topics: ['Array'],
+        testCases: [
+          {
+            id: 'tc1',
+            input: { nums: [2, 7, 11, 15] },
+            expectedOutput: { indexes: [0, 1] },
+            isHidden: false,
+            orderIndex: 1,
+          },
+        ],
       });
     });
   });

@@ -77,6 +77,15 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
     questionDescription: string;
     difficulty: 'easy' | 'medium' | 'hard';
     topics: string[];
+    testCases: QuestionTestCasePayload[];
+  }
+
+  interface QuestionTestCasePayload {
+    id: string;
+    input: unknown;
+    expectedOutput: unknown;
+    isHidden: boolean;
+    orderIndex: number;
   }
   ```
 

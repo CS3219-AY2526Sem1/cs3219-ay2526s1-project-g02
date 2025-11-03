@@ -225,6 +225,8 @@ export class QuestionsService implements OnModuleInit {
         return;
       }
 
+      const testCases = await this.getTestCasesForQuestion(question.id);
+
       await this.eventBusService.publishQuestionAssigned({
         matchId: payload.matchId,
         questionId: question.id,
@@ -232,6 +234,13 @@ export class QuestionsService implements OnModuleInit {
         questionDescription: question.description,
         difficulty: this.normalizeDifficultyForPayload(question.difficulty),
         topics: question.category,
+        testCases: testCases.map((testCase) => ({
+          id: testCase.id,
+          input: testCase.input,
+          expectedOutput: testCase.expectedOutput,
+          isHidden: testCase.isHidden,
+          orderIndex: testCase.orderIndex,
+        })),
       });
 
       this.logger.log(`Published question ${question.id} for match ${payload.matchId}`);
