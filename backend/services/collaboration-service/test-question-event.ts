@@ -13,10 +13,11 @@ import { QuestionAssignedPayload, TOPICS } from '@noclue/common';
 import { createClient } from '@supabase/supabase-js';
 
 // Configuration
-const PROJECT_ID = process.env.GCP_PROJECT_ID || 'test-project';
-const EMULATOR_HOST = process.env.PUBSUB_EMULATOR_HOST || 'localhost:8085';
+const PROJECT_ID = process.env.GCP_PROJECT_ID;
+const EMULATOR_HOST = process.env.PUBSUB_EMULATOR_HOST;
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+const GCP_KEY_FILENAME = process.env.GCP_KEY_FILENAME;
 
 async function testQuestionAssignedFlow() {
   console.log('🧪 Starting CollaborationService Integration Test\n');
@@ -24,7 +25,8 @@ async function testQuestionAssignedFlow() {
   // Initialize clients
   const pubsub = new PubSub({
     projectId: PROJECT_ID,
-    apiEndpoint: EMULATOR_HOST,
+    ...(EMULATOR_HOST && { apiEndpoint: EMULATOR_HOST }),
+    ...(GCP_KEY_FILENAME && { keyFilename: GCP_KEY_FILENAME })
   });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
