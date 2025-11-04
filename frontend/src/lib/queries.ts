@@ -29,6 +29,18 @@ export const GET_QUESTION = gql`
   }
 `;
 
+export const GET_USERS = gql`
+  query GetUsers($user_ids: [String!]!) {
+    users(user_ids: $user_ids) {
+      id
+      email
+      name
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 export const GET_QUESTIONS_BY_DIFFICULTY = gql`
   query GetQuestionsByDifficulty($difficulty: String!) {
     questionsByDifficulty(difficulty: $difficulty) {
@@ -100,5 +112,57 @@ export const IS_EMAIL_TAKEN = `
 export const IS_USERNAME_TAKEN = `
   query IsUsernameTaken($username: String!) {
     isUsernameTaken(username: $username)
+  }
+`;
+
+// Collaboration/Session queries
+export const GET_SESSION_WITH_DETAILS = gql`
+  query GetSessionWithDetails($sessionId: String!, $userId: String) {
+    sessionWithDetails(sessionId: $sessionId, userId: $userId) {
+      id
+      match_id
+      question_id
+      code
+      language
+      status
+      end_at
+      created_at
+      updated_at
+      match {
+        id
+        user1_id
+        user2_id
+        status
+        created_at
+        ended_at
+      }
+      question {
+        id
+        title
+        description
+        difficulty
+        category
+        examples
+        constraints
+        created_at
+        updated_at
+      }
+    }
+  }
+`;
+
+export const IS_USER_PART_OF_SESSION = gql`
+  query IsUserPartOfSession($sessionId: String!, $userId: String!) {
+    isUserPartOfSession(sessionId: $sessionId, userId: $userId)
+  }
+`;
+
+export const END_SESSION = gql`
+  mutation EndSession($sessionId: String!) {
+    endSession(sessionId: $sessionId) {
+      id
+      status
+      end_at
+    }
   }
 `;
