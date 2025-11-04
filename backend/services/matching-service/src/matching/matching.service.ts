@@ -8,6 +8,7 @@ import { CancellationResultOutput } from './matching.dto';
 import { EventBusService } from 'src/event-bus/event-bus.service';
 import { Difficulty, MatchRequest, MatchResult, QueueMember } from 'src/utils/types';
 import { getCurrentUnixTimestamp } from 'src/utils/utils';
+import { SessionEventPayload } from '@noclue/common';
 
 /* -------------------- Interfaces -------------------- */
 interface MatchEndedPayload {
@@ -17,7 +18,7 @@ interface MatchEndedPayload {
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
 const CANDIDATE_PEEK_COUNT = 50;
-const QUEUE_TTL_SECONDS = 120; // 2 minutes for debugging. TODO: CHANGE TO 5 MINUTES
+const QUEUE_TTL_SECONDS = 120; // 2 minutes.
 
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
@@ -143,7 +144,28 @@ export class MatchingService implements OnModuleInit {
     }
 
     onModuleInit() {
-        // TODO: Subscribe to Event Bus for (1) match ended events
+        this.eventBusService.subscribeToSessionEvents();
+        this.logger.log('MatchingService subscribed to receive Session Events');
+    }
+
+    // Updates DB when match ends
+    public async handleMatchEnded(payload: SessionEventPayload): Promise<void> {
+        this.logger.log(`Handling match ended for match ID ${payload.matchId}`);
+        const newStatus = payload.eventType === 'session_ended' ? 'completed' : 'expired';
+        try {
+            const { error } = await this.supabase
+                .from('matches')
+                .update({ status: newStatus, ended_at: new Date().toISOString() })
+                .eq('id', payload.matchId);
+            
+            if (error) {
+                this.logger.error(`Failed to update match status to ${newStatus} for match ID ${payload.matchId}: ${error.message}`);
+                return;
+            }
+            this.logger.log(`Match ID ${payload.matchId} status updated to ${newStatus}`);
+        } catch (error) {
+            this.logger.error(`Fatal error while handling match ended for match ID ${payload.matchId}:`, error);
+        }
     }
 
     /* -------------------- Private Helper Methods -------------------- */
@@ -301,7 +323,7 @@ export class MatchingService implements OnModuleInit {
             matchData!.id,
         )
 
-        // Step 4: Publish to Event Bus (to notify Collaboration Service)
+        // Step 4: Publish to Event Bus (to notify Question Service)
         this.logger.log(`Publishing match found event for match ID ${matchData!.id} to Event Bus`);
         const user1TopicsSet = new Set(user.topics);
         const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
@@ -313,34 +335,6 @@ export class MatchingService implements OnModuleInit {
             language: user.language,
             commonTopics: commonTopics,
         })
-    }
-
-    // Handle match ended (upon Collab Service event)
-    // TODO: Use this with event bus subscription
-    private async handleMatchEnded(payload: MatchEndedPayload): Promise<void> {
-        const { matchId } = payload;
-        this.logger.log(`Handling match ended for match ID ${matchId}`);
-
-        try {
-            const { error, data } = await this.supabase
-            .from('matches')
-            .update({ status: 'ended', ended_at: new Date().toISOString() })
-            .eq('id', matchId)
-            .select();
-
-            if (error) {
-                this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);
-                return;
-            }
-
-            if (data.length > 0) {
-                this.logger.log(`Match ID ${matchId} marked as ended.`);
-            } else {
-                this.logger.warn(`No match found with ID ${matchId} to mark as ended.`);
-            }
-        } catch (error) {
-            this.logger.error(`Fatal error while handling match ended for match ID ${matchId}: ${error.message}`);
-        }
     }
 
     // Helper method to get queue key based on difficulty
