@@ -65,6 +65,7 @@ export default function EditorPage() {
   const [processedEvents, setProcessedEvents] = useState<Set<number>>(
     new Set()
   );
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   const userId = authSession?.user?.id;
 
@@ -155,12 +156,21 @@ export default function EditorPage() {
 
       // Set initial user state in awareness
       if (userId) {
-        service.setLocalState({ userId });
+        service.setLocalState({ userId, isPresent: true });
       }
 
-      // Listen for session termination events through awareness
+      // Listen for awareness changes (presence and events)
       service.onAwarenessChange((states) => {
+        // Track online users
+        const currentlyOnline = new Set<string>();
+
         states.forEach((state, clientId) => {
+          // Track presence
+          if (state.userId && state.isPresent) {
+            currentlyOnline.add(state.userId);
+          }
+
+          // Handle session termination events
           const event = state.sessionEvent;
           if (
             event?.type === "terminate" &&
@@ -176,12 +186,18 @@ export default function EditorPage() {
             }
           }
         });
+
+        setOnlineUsers(currentlyOnline);
       });
     };
 
     initWebSocket();
 
     return () => {
+      // Mark user as not present before disconnecting
+      if (webSocketService && userId) {
+        webSocketService.setLocalState({ userId, isPresent: false });
+      }
       webSocketService?.destroy();
     };
   }, [sessionId, session, sessionError, userId]);
@@ -190,6 +206,9 @@ export default function EditorPage() {
     if (!userId || !webSocketService) return;
 
     try {
+      // Mark user as not present
+      webSocketService.setLocalState({ userId, isPresent: false });
+
       // Update database
       await endSessionMutation({ variables: { sessionId } });
 
@@ -202,11 +221,6 @@ export default function EditorPage() {
 
       // Mark this event as processed so we don't react to our own broadcast
       setProcessedEvents((prev) => new Set(prev).add(eventTimestamp));
-
-      // Clear the event after 2 seconds so it doesn't persist
-      setTimeout(() => {
-        webSocketService.setLocalState({ userId });
-      }, 2000);
 
       // Close modal and redirect
       setShowTerminateModal(false);
@@ -360,26 +374,45 @@ export default function EditorPage() {
               {/* Users */}
               {!usersLoading && matchUsers.length > 0 && (
                 <div className="flex flex-col gap-4">
-                  {matchUsers.map((user: User) => (
-                    <div key={user.id} className="flex items-center gap-3">
-                      <UserAvatar username={user.name} size="md" />
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">
-                          @{user.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Joined{" "}
-                          {new Date(user.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "long",
-                              year: "numeric",
-                            }
-                          )}
-                        </p>
+                  {matchUsers.map((user: User) => {
+                    const isOnline = onlineUsers.has(user.id);
+                    return (
+                      <div key={user.id} className="flex items-center gap-3">
+                        <div className="relative">
+                          <UserAvatar username={user.name} size="md" />
+                          {/* Presence indicator */}
+                          <div
+                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
+                              isOnline ? "bg-green-500" : "bg-red-500"
+                            }`}
+                            title={isOnline ? "Online" : "Offline"}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 flex items-center gap-2">
+                            @{user.name}
+                            <span
+                              className={`text-xs ${
+                                isOnline ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {isOnline ? "• Online" : "• Offline"}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Joined{" "}
+                            {new Date(user.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "long",
+                                year: "numeric",
+                              }
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
