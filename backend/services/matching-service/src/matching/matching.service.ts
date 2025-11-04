@@ -143,14 +143,20 @@ export class MatchingService implements OnModuleInit {
 
     }
 
-    onModuleInit() {
-        this.eventBusService.subscribeToSessionEvents();
+    async onModuleInit() {
+        await this.eventBusService.subscribeToSessionEvents();
         this.logger.log('MatchingService subscribed to receive Session Events');
     }
 
     // Updates DB when match ends
     public async handleMatchEnded(payload: SessionEventPayload): Promise<void> {
         this.logger.log(`Handling match ended for match ID ${payload.matchId}`);
+
+        if (payload.eventType !== 'session_ended' && payload.eventType !== 'session_expired') {
+            this.logger.log(`Ignoring non-terminal session event: ${payload.eventType}`);
+            return;
+        }
+
         const newStatus = payload.eventType === 'session_ended' ? 'completed' : 'expired';
         try {
             const { error } = await this.supabase
