@@ -11,7 +11,6 @@ const supabase = createClient(
 @Injectable()
 export class CollaborationService {
   private readonly logger = new Logger(CollaborationService.name);
-
   async createSession(matchId: string) {
     const { data, error } = await supabase
       .from('sessions')
@@ -65,6 +64,57 @@ export class CollaborationService {
     return data;
   }
 
+  /**
+   * Get session with match and question data
+   */
+  async getSessionWithDetails(sessionId: string) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(`
+        *,
+        match:matches!sessions_match_id_fkey(*),
+        question:questions!sessions_question_id_fkey(*)
+      `)
+      .eq('id', sessionId)
+      .single();
+
+    if (error) {
+      // Session not found
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      // Invalid UUID format - treat as not found
+      if (error.message?.includes('invalid input syntax for type uuid')) {
+        return null;
+      }
+      // Other errors
+      this.logger.error(`Failed to fetch session ${sessionId}: ${error.message}`);
+      throw new Error(`Failed to fetch session: ${error.message}`);
+    }
+    
+    return data;
+  }
+
+  /**
+   * Check if a user is part of a session (via the match)
+   */
+  async isUserPartOfSession(sessionId: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(`
+        match_id,
+        match:matches!sessions_match_id_fkey(user1_id, user2_id)
+      `)
+      .eq('id', sessionId)
+      .single();
+
+    // Return false for any error (including invalid UUID format)
+    if (error || !data) return false;
+
+    const match = data.match as any;
+    return match.user1_id === userId || match.user2_id === userId;
+  }
+
   async updateCode(sessionId: string, code: string) {
     const { data, error } = await supabase
       .from('sessions')
@@ -80,7 +130,7 @@ export class CollaborationService {
   async endSession(sessionId: string) {
     const { data, error } = await supabase
       .from('sessions')
-      .update({ status: 'ended', ended_at: new Date().toISOString() })
+      .update({ status: 'ended', end_at: new Date().toISOString() })
       .eq('id', sessionId)
       .select()
       .single();
