@@ -6,11 +6,17 @@ import { WebSocketService } from "@/lib/services/web-socket-service";
 import { PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { useQuery } from "@apollo/client";
-import { GET_SESSION_WITH_DETAILS, GET_USERS } from "@/lib/queries";
+import { useQuery, useMutation } from "@apollo/client";
+import {
+  GET_SESSION_WITH_DETAILS,
+  GET_USERS,
+  END_SESSION,
+} from "@/lib/queries";
 import { collaborationClient, userClient } from "@/lib/apollo-client";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import { TerminateSessionModal } from "@/components/TerminateSessionModal";
+import { SessionTerminatedModal } from "@/components/SessionTerminatedModal";
 
 type Question = {
   id: string;
@@ -54,8 +60,17 @@ export default function EditorPage() {
   const [webSocketService, setWebSocketService] =
     useState<WebSocketService | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [showTerminatedModal, setShowTerminatedModal] = useState(false);
+  const [processedEvents, setProcessedEvents] = useState<Set<number>>(
+    new Set()
+  );
 
   const userId = authSession?.user?.id;
+
+  const [endSessionMutation] = useMutation(END_SESSION, {
+    client: collaborationClient,
+  });
 
   // Fetch session with details
   const {
@@ -137,6 +152,31 @@ export default function EditorPage() {
       service.onSync(handleOnSync);
       service.onConnectionError(handleOnConnectionError);
       service.onConnectionClosed(handleOnConnectionClosed);
+
+      // Set initial user state in awareness
+      if (userId) {
+        service.setLocalState({ userId });
+      }
+
+      // Listen for session termination events through awareness
+      service.onAwarenessChange((states) => {
+        states.forEach((state, clientId) => {
+          const event = state.sessionEvent;
+          if (
+            event?.type === "terminate" &&
+            state.userId !== userId &&
+            event.timestamp
+          ) {
+            // Only process events from the last 10 seconds and only once
+            const eventAge = Date.now() - event.timestamp;
+            if (eventAge < 10000 && !processedEvents.has(event.timestamp)) {
+              console.log("Session terminated by user:", state.userId);
+              setProcessedEvents((prev) => new Set(prev).add(event.timestamp));
+              setShowTerminatedModal(true);
+            }
+          }
+        });
+      });
     };
 
     initWebSocket();
@@ -144,7 +184,37 @@ export default function EditorPage() {
     return () => {
       webSocketService?.destroy();
     };
-  }, [sessionId, session, sessionError]);
+  }, [sessionId, session, sessionError, userId]);
+
+  const handleTerminateSession = async () => {
+    if (!userId || !webSocketService) return;
+
+    try {
+      // Update database
+      await endSessionMutation({ variables: { sessionId } });
+
+      // Broadcast termination event through yjs awareness
+      const eventTimestamp = Date.now();
+      webSocketService.broadcastSessionEvent({
+        type: "terminate",
+        data: { userId },
+      });
+
+      // Mark this event as processed so we don't react to our own broadcast
+      setProcessedEvents((prev) => new Set(prev).add(eventTimestamp));
+
+      // Clear the event after 2 seconds so it doesn't persist
+      setTimeout(() => {
+        webSocketService.setLocalState({ userId });
+      }, 2000);
+
+      // Close modal and redirect
+      setShowTerminateModal(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to terminate session:", error);
+    }
+  };
 
   // Auth loading state
   if (authLoading) {
@@ -266,13 +336,10 @@ export default function EditorPage() {
                   Back
                 </button>
                 <button
-                  onClick={() => {
-                    // Handle leave session logic
-                    router.push("/");
-                  }}
+                  onClick={() => setShowTerminateModal(true)}
                   className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
-                  Leave Session
+                  Terminate Session
                 </button>
               </>
             }
@@ -380,6 +447,19 @@ export default function EditorPage() {
             </div>
           )}
         </div>
+
+        {/* Terminate Confirmation Modal */}
+        <TerminateSessionModal
+          isOpen={showTerminateModal}
+          onConfirm={handleTerminateSession}
+          onCancel={() => setShowTerminateModal(false)}
+        />
+
+        {/* Session Terminated by Other User Modal */}
+        <SessionTerminatedModal
+          isOpen={showTerminatedModal}
+          onGoHome={() => router.push("/")}
+        />
       </div>
     </PageLayout>
   ) : (
