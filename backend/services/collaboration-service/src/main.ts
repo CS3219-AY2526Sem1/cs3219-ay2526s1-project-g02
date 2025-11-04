@@ -8,13 +8,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({ origin: process.env.CORS_ORIGIN || '*', credentials: true });
   
-  // Initialize Y.js WebSocket server
-  const yjsPort = process.env.YJS_PORT || 1234;
-  const yjsServer = new YjsServer(Number(yjsPort));
-  
-  // Wire up event handlers
+  // Wire up services
   const eventBusService = app.get(EventBusService);
   const collaborationService = app.get(CollaborationService);
+  
+  // Initialize Y.js WebSocket server
+  const yjsPort = process.env.YJS_PORT || 1234;
+  const yjsServer = new YjsServer(Number(yjsPort), collaborationService);
   
   // Register handler for QuestionAssigned events
   eventBusService.registerQuestionAssignedHandler(async (payload) => {
@@ -22,7 +22,7 @@ async function bootstrap() {
     const session = await collaborationService.createSessionFromQuestion(payload);
     
     // 2. Initialize YJS session for this session
-    yjsServer.createSessionDocument(session.id);
+    await yjsServer.createSessionDocument(session.id);
     
     // 3. Publish session_started event
     await eventBusService.publishSessionEvent({
