@@ -37,6 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.user-service
+      target: builder
     container_name: noclue-user-service
     ports:
       - "4001:4001"
@@ -50,6 +51,12 @@ services:
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend/services/user-service/src:/app/backend/services/user-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/user-service/node_modules
+    command: sh -c "cd /app/backend/services/user-service && npm run start:dev"
     networks:
       - noclue-network
     healthcheck:
@@ -69,6 +76,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.question-service
+      target: builder
     container_name: noclue-question-service
     ports:
       - "4002:4002"
@@ -86,6 +94,11 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
     volumes:
       - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/question-service/src:/app/backend/services/question-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/question-service/node_modules
+    command: sh -c "cd /app/backend/services/question-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
     networks:
@@ -107,6 +120,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.matching-service
+      target: builder
     container_name: noclue-matching-service
     ports:
       - "4003:4003"
@@ -126,6 +140,11 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
     volumes:
       - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/matching-service/src:/app/backend/services/matching-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/matching-service/node_modules
+    command: sh -c "cd /app/backend/services/matching-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
       - redis
@@ -148,6 +167,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.collaboration-service
+      target: builder
     container_name: noclue-collaboration-service
     ports:
       - "4004:4004"
@@ -167,6 +187,11 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
     volumes:
       - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/collaboration-service/src:/app/backend/services/collaboration-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/collaboration-service/node_modules
+    command: sh -c "cd /app/backend/services/collaboration-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
     networks:
