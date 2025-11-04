@@ -129,13 +129,13 @@ interface SessionEventPayload {
 interface Session {
   id: string;              // UUID (auto-generated)
   match_id: string;        // Reference to match
-  question_id?: string;    // Reference to question (NEW)
+  question_id?: string;    // Reference to question
   code: string;            // Collaborative code content
   language: string;        // Programming language
   status: string;          // 'active', 'ended'
   created_at: string;      // ISO timestamp
-  ended_at?: string;       // ISO timestamp
-  updated_at: string;      // ISO timestamp
+  updated_at?: string;     // ISO timestamp (optional)
+  end_at?: string;         // ISO timestamp (optional)
 }
 ```
 
