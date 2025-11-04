@@ -2,6 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { GET_QUESTIONS } from "@/lib/queries";
+import { questionClient } from "@/lib/apollo-client";
 import { useState } from "react";
 import {
   Button,
@@ -30,7 +31,9 @@ interface User {
 }
 
 export default function SessionPage() {
-  const { loading, error, data } = useQuery(GET_QUESTIONS);
+  const { loading, error, data } = useQuery(GET_QUESTIONS, {
+    client: questionClient,
+  });
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
 
   // Mock users data - replace with actual data from your backend
