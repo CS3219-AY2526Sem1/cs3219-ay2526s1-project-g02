@@ -25,7 +25,7 @@ import { DatabaseModule } from './database/database.module';
     // Config Module
     ConfigModule.forRoot({
         isGlobal: true,
-        envFilePath: `.env`,
+        ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
 
     // Application Modules

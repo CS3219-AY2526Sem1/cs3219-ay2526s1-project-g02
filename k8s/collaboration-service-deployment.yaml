@@ -45,6 +45,8 @@ spec:
           value: "http://matching-service.noclue-app.svc.cluster.local:4003"
         - name: CORS_ORIGIN
           value: "https://noclue.com"
+        - name: GCP_PROJECT_ID
+          value: "noclue-476404"
         resources:
           requests:
             memory: "128Mi"
