@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+  labels:
+    app: llm-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-service
+  template:
+    metadata:
+      labels:
+        app: llm-service
+    spec:
+      containers:
+        - name: llm-service
+          image: gcr.io/YOUR_PROJECT_ID/llm-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4005
+              name: http
+          env:
+            - name: PORT
+              value: "4005"
+            - name: NODE_ENV
+              value: "production"
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: llm-api-key
+            - name: LLM_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: llm-model
+                  optional: true
+            - name: USER_SERVICE_URL
+              value: "http://user-service:4001"
+            - name: QUESTION_SERVICE_URL
+              value: "http://question-service:4002"
+            - name: MATCHING_SERVICE_URL
+              value: "http://matching-service:4003"
+            - name: COLLABORATION_SERVICE_URL
+              value: "http://collaboration-service:4004"
+            - name: CORS_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: frontend-url
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
