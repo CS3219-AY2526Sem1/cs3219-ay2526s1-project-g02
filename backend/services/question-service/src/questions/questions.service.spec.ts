@@ -37,12 +37,14 @@ describe('QuestionsService - Unit Tests', () => {
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       contains: jest.fn().mockReturnThis(),
       overlaps: jest.fn().mockReturnThis(),
       in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockReturnThis(),
     };
 
     (createClient as jest.Mock).mockReturnValue(mockSupabaseClient);
@@ -142,6 +144,142 @@ describe('QuestionsService - Unit Tests', () => {
           },
         ],
       });
+    });
+  });
+
+  describe('submitQuestionSelection', () => {
+    it('throws when match is not found', async () => {
+      jest
+        .spyOn<any, any>(service as any, 'fetchMatchParticipants')
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.submitQuestionSelection({
+          matchId: 'match-missing',
+          userId: 'user-a',
+          questionId: 'question-1',
+        }),
+      ).rejects.toThrow('Match match-missing not found or inactive');
+    });
+
+    it('returns pending status until both users submit selections', async () => {
+      const matchRecord = {
+        id: 'match-1',
+        user1_id: 'user-a',
+        user2_id: 'user-b',
+        status: 'active',
+      };
+
+      const selectionForUserA = {
+        id: 'sel-1',
+        matchId: 'match-1',
+        userId: 'user-a',
+        questionId: 'question-1',
+        isWinner: null,
+        submittedAt: '2024-01-01T00:00:00Z',
+        finalizedAt: null,
+      };
+
+      jest
+        .spyOn<any, any>(service as any, 'fetchMatchParticipants')
+        .mockResolvedValueOnce(matchRecord);
+
+      jest.spyOn(service, 'findOne').mockResolvedValueOnce({
+        id: 'question-1',
+        title: 'Sample Question',
+        description: 'Description',
+        difficulty: 'Easy',
+        category: ['Array'],
+        examples: null,
+        constraints: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      } as any);
+
+      jest
+        .spyOn<any, any>(service as any, 'fetchSelections')
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([selectionForUserA]);
+
+      const upsertSpy = jest
+        .spyOn(mockSupabaseClient, 'upsert')
+        .mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.submitQuestionSelection({
+        matchId: 'match-1',
+        userId: 'user-a',
+        questionId: 'question-1',
+      });
+
+      expect(upsertSpy).toHaveBeenCalledWith(
+        {
+          match_id: 'match-1',
+          user_id: 'user-a',
+          question_id: 'question-1',
+        },
+        { onConflict: 'match_id,user_id' },
+      );
+
+      expect(result.status).toBe('PENDING');
+      expect(result.pendingUserIds).toEqual(['user-b']);
+      expect(eventBusServiceMock.publishQuestionAssigned).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getQuestionSelectionStatus', () => {
+    it('returns complete status when a winner has been chosen', async () => {
+      const matchRecord = {
+        id: 'match-2',
+        user1_id: 'user-a',
+        user2_id: 'user-b',
+        status: 'active',
+      };
+
+      const winnerSelection = {
+        id: 'sel-win',
+        matchId: 'match-2',
+        userId: 'user-b',
+        questionId: 'question-9',
+        isWinner: true,
+        submittedAt: '2024-01-01T00:00:00Z',
+        finalizedAt: '2024-01-01T00:05:00Z',
+      };
+
+      const loserSelection = {
+        id: 'sel-lose',
+        matchId: 'match-2',
+        userId: 'user-a',
+        questionId: 'question-7',
+        isWinner: false,
+        submittedAt: '2024-01-01T00:00:00Z',
+        finalizedAt: '2024-01-01T00:05:00Z',
+      };
+
+      jest
+        .spyOn<any, any>(service as any, 'fetchMatchParticipants')
+        .mockResolvedValueOnce(matchRecord);
+
+      jest
+        .spyOn<any, any>(service as any, 'fetchSelections')
+        .mockResolvedValueOnce([winnerSelection, loserSelection]);
+
+      jest.spyOn(service, 'findOne').mockResolvedValueOnce({
+        id: 'question-9',
+        title: 'Winning Question',
+        description: 'Description',
+        difficulty: 'Medium',
+        category: ['Stack'],
+        examples: null,
+        constraints: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      } as any);
+
+      const result = await service.getQuestionSelectionStatus('match-2');
+
+      expect(result.status).toBe('COMPLETE');
+      expect(result.finalQuestion?.id).toBe('question-9');
+      expect(result.pendingUserIds).toEqual([]);
     });
   });
 

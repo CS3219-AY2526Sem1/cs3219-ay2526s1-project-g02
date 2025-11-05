@@ -47,10 +47,34 @@
 - ✅ Cleanup script: `scripts/cleanup-pubsub.ts`
 - ✅ Added npm scripts: `npm run setup:pubsub` and `npm run cleanup:pubsub`
 - ✅ Updated `.env.example` with Pub/Sub configuration
+- ✅ Smoke test helper: `node scripts/question-service-pubsub.js smoke-test`
+  - Automatically bootstraps a `matches` row in Supabase unless `SMOKE_CREATE_MATCH_RECORD=false`
 
 ### 5. Documentation
 - ✅ Comprehensive guide: `docs/PUBSUB_INTEGRATION.md`
 - ✅ Includes usage examples, troubleshooting, and best practices
+
+### 6. Question Selection Flow
+- ✅ GraphQL mutation `submitQuestionSelection` records each participant’s pick and publishes a question once both have submitted
+- ✅ GraphQL query `questionSelectionStatus` exposes the current state (pending users, chosen question)
+- ✅ Supabase table `question_selections` stores interim selections and the winning choice; create it with:
+  ```sql
+  create extension if not exists "pgcrypto";
+
+  create table if not exists public.question_selections (
+    id uuid primary key default gen_random_uuid(),
+    match_id uuid not null references public.matches(id) on delete cascade,
+    user_id uuid not null,
+    question_id uuid not null references public.questions(id) on delete cascade,
+    is_winner boolean,
+    submitted_at timestamptz default now(),
+    finalized_at timestamptz,
+    created_at timestamptz default now()
+  );
+
+  create unique index if not exists question_selections_match_user_idx
+    on public.question_selections(match_id, user_id);
+  ```
 
 ## 📋 Next Steps
 
@@ -209,6 +233,11 @@ Update `backend/services/matching-service/src/matching/matching.service.ts`:
    - Verify Question Service receives the event
    - Verify Collaboration Service receives question assignment
    - Verify Matching Service receives session events
+   - For a manual frontend smoke test, keep the client running, submit a match request, then execute:
+     ```bash
+     node scripts/question-service-pubsub.js smoke-test
+     ```
+     Override any payload fields with `MATCH_*` or `QUESTION_*` environment variables (for example, `MATCH_TOPICS="Graphs and Trees"`). Set `SMOKE_PUBLISH_QUESTION=false` if the Question Service should generate the follow-up event instead of the helper. To skip the automatic Supabase match bootstrap, set `SMOKE_CREATE_MATCH_RECORD=false`.
 
 ## 🔧 Configuration Files Modified
 

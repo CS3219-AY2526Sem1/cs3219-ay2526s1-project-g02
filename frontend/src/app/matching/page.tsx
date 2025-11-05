@@ -284,15 +284,17 @@ export default function MatchingPage() {
   useEffect(() => {
     // Event Listener for 'matchFound' (i.e. match found after being queued)
     const handleMatchFoundEvent = (data: MatchFoundData) => {
-      if (status === "QUEUED" && matchResult) {
-        console.log("Match found!", data);
-        setFinalMatchData(data);
+      console.log("Match found!", data);
+      setFinalMatchData(data);
+
+      if (status !== "MATCH_FOUND") {
         setStatus("MATCH_FOUND");
-        setNotification({
-          message: "Match found successfully!",
-          status: "MATCH_FOUND",
-        });
       }
+
+      setNotification({
+        message: "Match found successfully!",
+        status: "MATCH_FOUND",
+      });
     };
 
     // Event Listener for 'requestExpired' (i.e. match request expired)
@@ -486,12 +488,17 @@ export default function MatchingPage() {
               </span>
               <Button
                 onClick={() => {
-                  console.log("Navigating to session...");
-                  router.push("/question-selection");
+                  if (!finalMatchData?.matchId) {
+                    console.warn("Match ID not ready yet. Waiting for event payload.");
+                    return;
+                  }
+                  console.log("Navigating to session with match:", finalMatchData.matchId);
+                  router.push(`/question-selection?matchId=${finalMatchData.matchId}`);
                 }}
                 variant="primary"
+                disabled={!finalMatchData?.matchId}
               >
-                Go to Session
+                {finalMatchData?.matchId ? "Go to Session" : "Preparing session..."}
               </Button>
             </div>
           ) : status === "LOADING" ? (
