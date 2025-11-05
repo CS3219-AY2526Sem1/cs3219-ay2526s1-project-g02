@@ -95,6 +95,27 @@ export class CollaborationService {
     return data;
   }
 
+  async getLatestSessionForMatch(matchId: string) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+
+      this.logger.error(`Failed to fetch session for match ${matchId}: ${error.message}`);
+      throw new Error(`Failed to fetch session for match: ${error.message}`);
+    }
+
+    return data ?? null;
+  }
+
   /**
    * Check if a user is part of a session (via the match)
    */
