@@ -8,7 +8,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const GCP_KEY_FILENAME = process.env.GCP_KEY_FILENAME;
 
-const TEST_MATCH_ID = "7d188cb7-3137-4fa2-8112-20c405991a7a";
+// INSERT YOUR TEST MATCH ID HERE
+const TEST_MATCH_ID = "<insert-test-match-id-here>";
 
 async function testSessionExpiredFlow() {
     console.log("Starting Session Expired Integration Test");
