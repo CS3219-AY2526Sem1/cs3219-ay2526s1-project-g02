@@ -27,6 +27,7 @@ async function bootstrap() {
     // 3. Publish session_started event
     await eventBusService.publishSessionEvent({
       matchId: payload.matchId,
+      sessionId: session.id,
       eventType: 'session_started',
       timestamp: new Date().toISOString(),
     });
