@@ -37,6 +37,7 @@ COPY frontend/tsconfig.json ./frontend/
 COPY frontend/next.config.js ./frontend/
 COPY frontend/tailwind.config.js ./frontend/
 COPY frontend/postcss.config.js ./frontend/
+COPY frontend/components.json ./frontend/
 COPY frontend/src ./frontend/src
 COPY frontend/public ./frontend/public
 

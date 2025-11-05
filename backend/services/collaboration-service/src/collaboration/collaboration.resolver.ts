@@ -44,6 +44,11 @@ export class CollaborationResolver {
     return this.collaborationService.isUserPartOfSession(sessionId, userId);
   }
 
+  @Query(() => SessionType, { nullable: true })
+  async sessionByMatch(@Args('matchId') matchId: string) {
+    return this.collaborationService.getLatestSessionForMatch(matchId);
+  }
+
   @Mutation(() => SessionType)
   async createSession(@Args('matchId') matchId: string) {
     return this.collaborationService.createSession(matchId);

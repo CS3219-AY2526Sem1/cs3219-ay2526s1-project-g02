@@ -29,6 +29,52 @@ export const GET_QUESTION = gql`
   }
 `;
 
+export const SUBMIT_QUESTION_SELECTION = gql`
+  mutation SubmitQuestionSelection($input: SubmitQuestionSelectionInput!) {
+    submitQuestionSelection(input: $input) {
+      status
+      pendingUserIds
+      selections {
+        userId
+        questionId
+        isWinner
+        submittedAt
+        finalizedAt
+      }
+      finalQuestion {
+        id
+        title
+        difficulty
+        category
+        description
+      }
+    }
+  }
+`;
+
+export const QUESTION_SELECTION_STATUS = gql`
+  query QuestionSelectionStatus($matchId: ID!) {
+    questionSelectionStatus(matchId: $matchId) {
+      status
+      pendingUserIds
+      selections {
+        userId
+        questionId
+        isWinner
+        submittedAt
+        finalizedAt
+      }
+      finalQuestion {
+        id
+        title
+        difficulty
+        category
+        description
+      }
+    }
+  }
+`;
+
 export const GET_USERS = gql`
   query GetUsers($user_ids: [String!]!) {
     users(user_ids: $user_ids) {
@@ -147,6 +193,22 @@ export const GET_SESSION_WITH_DETAILS = gql`
         created_at
         updated_at
       }
+    }
+  }
+`;
+
+export const SESSION_BY_MATCH = gql`
+  query SessionByMatch($matchId: String!) {
+    sessionByMatch(matchId: $matchId) {
+      id
+      match_id
+      question_id
+      code
+      language
+      status
+      end_at
+      created_at
+      updated_at
     }
   }
 `;
