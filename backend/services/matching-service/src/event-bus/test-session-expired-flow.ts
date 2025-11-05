@@ -24,6 +24,7 @@ async function testSessionExpiredFlow() {
 
     const testPayload: SessionEventPayload = {
         matchId: TEST_MATCH_ID,
+        sessionId: "test-session-123",
         eventType: "session_expired",
         timestamp: new Date().toISOString(),
     }
