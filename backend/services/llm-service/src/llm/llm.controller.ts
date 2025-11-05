@@ -1,21 +1,70 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from "@nestjs/common";
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Res,
+  Sse,
+  MessageEvent,
+} from "@nestjs/common";
+import { Response } from "express";
+import { Observable } from "rxjs";
 import { LlmService } from "./llm.service";
-import { ProblemRequestDto, SolutionRequestDto } from "./dto/llm.dto";
+import {
+  QuestionExplanationRequestDto,
+  ChatRequestDto,
+} from "./dto/llm.dto";
 
-@Controller()
+@Controller('llm')
 export class LlmController {
   constructor(private readonly llmService: LlmService) {}
 
-  @Post("/problem")
+  /**
+   * POST /llm/explain-question
+   * AI-assisted question explanation endpoint
+   */
+  @Post("/explain-question")
   @HttpCode(HttpStatus.OK)
-  async analyzeProblem(@Body() problemRequest: ProblemRequestDto) {
-    return this.llmService.analyzeProblem(problemRequest);
+  async explainQuestion(@Body() request: QuestionExplanationRequestDto) {
+    return this.llmService.explainQuestion(request);
   }
 
-  @Post("/solution")
-  @HttpCode(HttpStatus.OK)
-  async generateSolution(@Body() solutionRequest: SolutionRequestDto) {
-    return this.llmService.generateSolution(solutionRequest);
+  /**
+   * POST /llm/chat
+   * AI-assisted problem-solving chat with streaming
+   * Uses Server-Sent Events (SSE) for real-time streaming
+   */
+  @Post("/chat")
+  async chat(
+    @Body() request: ChatRequestDto,
+    @Res() response: Response
+  ) {
+    // Set up SSE headers
+    response.setHeader("Content-Type", "text/event-stream");
+    response.setHeader("Cache-Control", "no-cache");
+    response.setHeader("Connection", "keep-alive");
+    response.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+    try {
+      const stream = this.llmService.chatStream(request);
+
+      for await (const chunk of stream) {
+        // Send each chunk as SSE data
+        response.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      }
+
+      // Send completion signal
+      response.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      response.end();
+    } catch (error) {
+      response.write(
+        `data: ${JSON.stringify({ 
+          error: "An error occurred while processing your request",
+          details: error.message 
+        })}\n\n`
+      );
+      response.end();
+    }
   }
 }
-
