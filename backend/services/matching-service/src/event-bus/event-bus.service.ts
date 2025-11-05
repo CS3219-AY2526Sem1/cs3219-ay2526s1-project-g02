@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
     PubSubService,
@@ -7,13 +7,18 @@ import {
     TOPICS,
     SUBSCRIPTIONS
 } from "@noclue/common";
+import { MatchingService } from "src/matching/matching.service";
 
 @Injectable()
 export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(EventBusService.name);
     private pubsubService: PubSubService;
 
-    constructor(private readonly configService: ConfigService) {
+    constructor(
+        private readonly configService: ConfigService,
+        @Inject(forwardRef(() => MatchingService))
+        private readonly matchingService: MatchingService,
+    ) {
         const projectId = this.configService.get<string>('GCP_PROJECT_ID');
         const keyFilename = this.configService.get<string>('GCP_KEY_FILENAME');
         const emulatorHost = this.configService.get<string>('PUBSUB_EMULATOR_HOST');
@@ -66,7 +71,7 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
     /**
      * Subscribe to session events from Collaboration Service
      */
-    private async subscribeToSessionEvents(): Promise<void> {
+    public async subscribeToSessionEvents(): Promise<void> {
         await this.pubsubService.subscribe<SessionEventPayload>(
             SUBSCRIPTIONS.SESSION_QUEUE_SUB,
             async (data) => {
@@ -82,8 +87,10 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
         this.logger.log(`Received session event: ${payload.eventType} for match ${payload.matchId}`);
 
-        // This method can be called by the matching service to update match status
-        // For now, just logging - the actual implementation should be in matching.service.ts
+        if (payload.eventType === 'session_ended' || payload.eventType === 'session_expired') {
+            await this.matchingService.handleMatchEnded(payload);
+            this.logger.log(`Updated match ${payload.matchId} status to completed`);
+        }
     }
 
     /**

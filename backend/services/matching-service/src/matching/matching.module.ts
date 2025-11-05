@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MatchingResolver } from './matching.resolver';
 import { MatchingService } from './matching.service';
 import { MatchingGateway } from './matching.gateway';
@@ -9,7 +9,9 @@ import { CheckModule } from 'src/check/check.module';
 import { EventBusModule } from 'src/event-bus/event-bus.module';
 
 @Module({
-  imports: [RedisModule, DatabaseModule, CheckModule, EventBusModule],
+  imports: [RedisModule, DatabaseModule, CheckModule, EventBusModule,
+    forwardRef(() => EventBusModule),
+  ],
   providers: [MatchingResolver, MatchingService, MatchingGateway, TtlService],
   exports: [MatchingService],
 })
