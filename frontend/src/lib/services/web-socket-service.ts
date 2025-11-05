@@ -103,4 +103,9 @@ export class WebSocketService {
       },
     });
   }
+
+  public getCurrentCode(): string {
+    // Get current code from Y.js document
+    return this.document.getText("monaco").toString();
+  }
 }

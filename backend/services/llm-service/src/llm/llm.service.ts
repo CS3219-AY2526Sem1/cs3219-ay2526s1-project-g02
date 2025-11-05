@@ -163,6 +163,10 @@ Please provide:
     try {
       const question = await this.getQuestion(request.questionId);
 
+      const currentCodeSection = request.currentCode 
+        ? `\n\nCurrent code written by the user:\n\`\`\`\n${request.currentCode}\n\`\`\``
+        : "";
+
       const systemPrompt = `You are a helpful programming assistant helping users solve coding problems.
 
 Problem: ${question.title}
@@ -173,7 +177,7 @@ Description:
 ${question.description}
 
 ${question.examples ? `Examples:\n${question.examples}` : ""}
-${question.constraints ? `Constraints:\n${question.constraints}` : ""}
+${question.constraints ? `Constraints:\n${question.constraints}` : ""}${currentCodeSection}
 
 Your role:
 - Provide hints and guidance without giving away the complete solution
@@ -181,6 +185,7 @@ Your role:
 - Suggest possible approaches and data structures
 - Explain concepts when asked
 - Be encouraging and educational
+- Reference the user's current code when relevant
 
 Do not provide complete working code unless explicitly requested. Focus on teaching and guiding.`;
 

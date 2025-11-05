@@ -30,6 +30,10 @@ export class ChatRequestDto {
   @IsOptional()
   @IsArray()
   conversationHistory?: ChatMessage[];
+
+  @IsOptional()
+  @IsString()
+  currentCode?: string;
 }
 
 export interface ChatMessage {

@@ -18,6 +18,7 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { TerminateSessionModal } from "@/components/TerminateSessionModal";
 import { SessionTerminatedModal } from "@/components/SessionTerminatedModal";
 import { QuestionExplanation } from "@/components/QuestionExplanation";
+import { AiChat } from "@/components/AiChat";
 
 type Question = {
   id: string;
@@ -495,6 +496,14 @@ export default function EditorPage() {
           isOpen={showTerminatedModal}
           onGoHome={() => router.push("/")}
         />
+
+        {/* AI Chat - Only show if we have a question */}
+        {sessionData.question && (
+          <AiChat
+            questionId={sessionData.question.id}
+            getCurrentCode={() => webSocketService?.getCurrentCode() || ""}
+          />
+        )}
       </div>
     </PageLayout>
   ) : (
