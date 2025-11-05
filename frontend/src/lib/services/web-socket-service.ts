@@ -76,4 +76,31 @@ export class WebSocketService {
     this.binding?.destroy();
     this.binding = null;
   }
+
+  public setLocalState(state: any) {
+    // Set local awareness state (shared with other clients)
+    this.provider.awareness.setLocalState(state);
+  }
+
+  public getAwareness() {
+    return this.provider.awareness;
+  }
+
+  public onAwarenessChange(callback: (states: Map<number, any>) => void) {
+    this.provider.awareness.on("change", () => {
+      callback(this.provider.awareness.getStates());
+    });
+  }
+
+  public broadcastSessionEvent(event: { type: string; data: any }) {
+    // Broadcast session-level event through awareness
+    const currentState = this.provider.awareness.getLocalState() || {};
+    this.setLocalState({
+      ...currentState,
+      sessionEvent: {
+        ...event,
+        timestamp: Date.now(),
+      },
+    });
+  }
 }
