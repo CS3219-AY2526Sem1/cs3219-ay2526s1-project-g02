@@ -3,6 +3,14 @@ import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
 import type { editor } from "monaco-editor";
 
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  timestamp: number;
+}
+
 export class WebSocketService {
   private provider: WebsocketProvider;
   private binding: MonacoBinding | null = null;
@@ -107,5 +115,41 @@ export class WebSocketService {
   public getCurrentCode(): string {
     // Get current code from Y.js document
     return this.document.getText("monaco").toString();
+  }
+
+  /**
+   * Get the chat messages array from Yjs document
+   */
+  public getChatMessages(): Y.Array<ChatMessage> {
+    return this.document.getArray<ChatMessage>("chat");
+  }
+
+  /**
+   * Send a chat message
+   */
+  public sendChatMessage(userId: string, userName: string, content: string) {
+    const chat = this.getChatMessages();
+    const message: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      userId,
+      userName,
+      content,
+      timestamp: Date.now(),
+    };
+    chat.push([message]);
+  }
+
+  /**
+   * Listen for chat message changes
+   */
+  public onChatChange(callback: (messages: ChatMessage[]) => void) {
+    const chat = this.getChatMessages();
+    const handler = () => {
+      callback(chat.toArray());
+    };
+    chat.observe(handler);
+    // Return initial state
+    callback(chat.toArray());
+    return () => chat.unobserve(handler);
   }
 }

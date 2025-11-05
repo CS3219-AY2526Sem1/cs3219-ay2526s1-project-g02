@@ -19,6 +19,7 @@ import { TerminateSessionModal } from "@/components/TerminateSessionModal";
 import { SessionTerminatedModal } from "@/components/SessionTerminatedModal";
 import { QuestionExplanation } from "@/components/QuestionExplanation";
 import { AiChat } from "@/components/AiChat";
+import { Chat } from "@/components/Chat";
 
 type Question = {
   id: string;
@@ -99,6 +100,8 @@ export default function EditorPage() {
   });
 
   const matchUsers = usersData?.users || [];
+  const currentUser = matchUsers.find((user: User) => user.id === userId);
+  const currentUserName = currentUser?.name || "User";
 
   // Handle query errors
   useEffect(() => {
@@ -502,6 +505,15 @@ export default function EditorPage() {
           <AiChat
             questionId={sessionData.question.id}
             getCurrentCode={() => webSocketService?.getCurrentCode() || ""}
+          />
+        )}
+
+        {/* Team Chat - Only show if websocket is connected */}
+        {webSocketService && userId && (
+          <Chat
+            webSocketService={webSocketService}
+            currentUserId={userId}
+            currentUserName={currentUserName}
           />
         )}
       </div>
