@@ -6,7 +6,7 @@ export default function UpdatePasswordPage() {
   return (
     <>
       <PageLayout header={<NavBar></NavBar>}>
-        <UpdatePasswordModal />
+        <UpdatePasswordModal isForgot={true} />
       </PageLayout>
     </>
   );

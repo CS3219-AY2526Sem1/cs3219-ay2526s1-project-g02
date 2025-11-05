@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { UPDATE_PASSWORD } from "@/lib/queries";
 
-export default function UpdatePasswordModal() {
+export default function UpdatePasswordModal({
+  isForgot,
+  onClose,
+}: {
+  isForgot: boolean;
+  onClose?: () => void;
+}) {
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
 
@@ -42,7 +48,11 @@ export default function UpdatePasswordModal() {
 
       setError(error?.message);
 
-      if (!error) {
+      if (!error && !isForgot && onClose) {
+        onClose();
+      }
+
+      if (!error && isForgot) {
         router.push("/update-password-success");
       }
     } catch (e) {
@@ -50,13 +60,27 @@ export default function UpdatePasswordModal() {
     }
   }
   return (
-    <div className="relative w-full max-w-lg rounded-2xl border border-[#e5e7eb] bg-[#ffffff] shadow-xl ring-1 ring-[#e5e7eb]">
-      <div className="p-6 flex flex-col gap-4">
-        <div className="text-2xl font-bold">Update Password</div>
+    <div
+      className={
+        isForgot
+          ? "relative w-full max-w-lg rounded-2xl border border-[#e5e7eb] bg-[#ffffff] shadow-xl ring-1 ring-[#e5e7eb]"
+          : ""
+      }
+    >
+      <div
+        className={
+          isForgot ? "p-6 flex flex-col gap-4" : "pb-6 flex flex-col gap-4"
+        }
+      >
+        <div className={isForgot ? "text-2xl font-bold" : "text-sm"}>
+          {isForgot ? "Update Password" : "You can update your password below."}
+        </div>
         <div>
           <form className="flex flex-col gap-3">
             <div>
-              <label htmlFor="password">Password:</label>
+              <label htmlFor="password" className={!isForgot ? "text-sm" : ""}>
+                Password:
+              </label>
               <Input
                 onChange={(e) => setPassword(e.target.value)}
                 id="password"
@@ -104,7 +128,9 @@ export default function UpdatePasswordModal() {
             </div>
 
             <div>
-              <label htmlFor="password">Repeat Password:</label>
+              <label htmlFor="password" className={!isForgot ? "text-sm" : ""}>
+                Repeat Password:
+              </label>
               <Input
                 onChange={(e) => setRepeatPassword(e.target.value)}
                 id="repeat-password"

@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 
 // Question queries
 export const GET_QUESTIONS = gql`
@@ -77,8 +77,8 @@ export const VERIFY_PASSWORD = `
 export const UPDATE_PASSWORD = `
   mutation UpdatePassword($input: UpdatePasswordInput!) {
     updatePassword(input: $input){
-    }
     message
+   }
   }
 `;
 
@@ -100,5 +100,19 @@ export const IS_EMAIL_TAKEN = `
 export const IS_USERNAME_TAKEN = `
   query IsUsernameTaken($username: String!) {
     isUsernameTaken(username: $username)
+  }
+`;
+
+export const MY_USERNAME_QUERY = `
+  query MyUsername($id: String!) {
+    myUsername(id: $id)
+  }
+`;
+
+export const UPDATE_MY_USERNAME = `
+  mutation UpdateMyUsername($id: String!, $username: String!) {
+    updateMyUsername(id: $id, username: $username){
+     message
+   }
   }
 `;

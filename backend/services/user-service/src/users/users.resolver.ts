@@ -82,6 +82,23 @@ export class UsersResolver {
     return this.usersService.isUsernameTaken(username);
   }
 
+  @Query(() => String, { name: "myUsername", nullable: true })
+  async myUsername(@Args("id", { type: () => String }) id: string) {
+    const username = await this.usersService.getMyUsername(id);
+
+    return username;
+  }
+
+  @Mutation(() => UserResponse, { name: "updateMyUsername" })
+  async updateMyUsername(
+    @Args("id", { type: () => String }) id: string,
+    @Args("username", { type: () => String }) username: string
+  ) {
+    console.log("ID", id);
+    console.log("username", username);
+    return this.usersService.updateMyUsername(id, username);
+  }
+
   @Query(() => String, { name: "ping" })
   ping() {
     return "pong";

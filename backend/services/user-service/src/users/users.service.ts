@@ -164,4 +164,30 @@ export class UsersService {
       console.error("deleteAccountById error:", error);
     }
   }
+
+  async getMyUsername(id: string) {
+    const { data, error } = await this.supabase
+      .from("users")
+      .select("username")
+      .eq("id", id)
+      .single();
+    if (error) throw error;
+
+    return data?.username ?? null;
+  }
+
+  async updateMyUsername(id: string, newUsername: string) {
+    const { data, error } = await this.supabase
+      .from("users")
+      .update({ username: newUsername })
+      .eq("id", id);
+
+    if (error) {
+      return { message: "Password updated unsuccessfully" };
+    }
+
+    return {
+      message: "Username updated successfully",
+    };
+  }
 }
