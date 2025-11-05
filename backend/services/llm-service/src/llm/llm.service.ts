@@ -27,7 +27,6 @@ export class LlmService {
   }
 
   async generateSolution(solutionRequest: SolutionRequestDto) {
-    this.logger.log(`Generating solution for: ${solutionRequest.problemDescription}`);
 
     // TODO: Integrate with actual LLM API (OpenAI, Anthropic, etc.)
     // For now, returning a mock response
