@@ -16,6 +16,7 @@
     "dev:matching": "npm run start:dev --workspace=@noclue/matching-service",
     "dev:question": "npm run start:dev --workspace=@noclue/question-service",
     "dev:collaboration": "npm run start:dev --workspace=@noclue/collaboration-service",
+    "dev:llm": "npm run start:dev --workspace=@noclue/llm-service",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",

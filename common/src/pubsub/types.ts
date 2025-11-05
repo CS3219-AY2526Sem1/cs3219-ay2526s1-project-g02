@@ -46,6 +46,7 @@ export interface QuestionTestCasePayload {
  */
 export interface SessionEventPayload {
     matchId: string;
+    sessionId: string;
     eventType: 'session_started' | 'session_ended' | 'session_expired';
     timestamp: string;
 }
