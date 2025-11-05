@@ -487,7 +487,7 @@ export default function MatchingPage() {
               <Button
                 onClick={() => {
                   console.log("Navigating to session...");
-                  dismissNotification();
+                  router.push("/question-selection");
                 }}
                 variant="primary"
               >
