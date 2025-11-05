@@ -164,4 +164,23 @@ export class UsersService {
       console.error("deleteAccountById error:", error);
     }
   }
+
+  async getUsersByIds(userIds: string[]) {
+    const { data, error } = await this.supabase
+      .from("users")
+      .select("id, email, username, created_at")
+      .in("id", userIds);
+
+    if (error) {
+      console.error("Error fetching users by IDs:", error);
+      throw error;
+    }
+
+    return data.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.username,
+      createdAt: user.created_at,
+    }));
+  }
 }

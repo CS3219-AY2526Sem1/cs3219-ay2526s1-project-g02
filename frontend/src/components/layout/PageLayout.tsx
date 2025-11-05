@@ -17,11 +17,9 @@ export function PageLayout({
     <>
       <div className="bg-white"> {header}</div>
 
-      <div
-        className={`flex min-h-screen flex-col bg-blue text-slate-900 ${className}`}
-      >
+      <div className={`flex flex-col bg-blue text-slate-900 ${className}`}>
         {/* Main Content */}
-        <main className="mx-auto w-full  h-full max-w-6xl flex-1  ">
+        <main className=" w-full  ">
           {sidebar ? (
             <div className="grid h-full gap-6 lg:grid-cols-[280px_1fr]">
               {/* Sidebar */}
@@ -34,7 +32,7 @@ export function PageLayout({
             </div>
           ) : (
             // No sidebar layout
-            <div className="flex items-center justify-center w-full min-h-screen overflow-y-auto">
+            <div className="flex items-center justify-center w-full">
               {children}
             </div>
           )}
