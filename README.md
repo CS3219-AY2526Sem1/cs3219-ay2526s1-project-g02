@@ -117,7 +117,8 @@ flowchart TB
 **Message Flow:**
 1. **Match Found** → Matching Service publishes to `matching-queue`
 2. **Question Assignment** → Question Service consumes match, assigns question, publishes to `question-queue`
-3. **Session Provisioned** → Collaboration Service consumes `question-queue` events, creates collaboration session, and publishes lifecycle updates to `session-queue`
+3. **Session Provisioned** → Collaboration Service consumes `question-queue` events, creates collaboration session, and publishes lifecycle updates (with `sessionId`) to `session-queue`
+4. **Client Notified** → Matching Service consumes `session-queue` and emits a `sessionStarted` WebSocket event so both users can jump straight into the editor
 
 For detailed Pub/Sub integration, see [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md).
 

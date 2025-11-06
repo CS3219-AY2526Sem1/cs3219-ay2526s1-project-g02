@@ -8,8 +8,9 @@ import {
   QUESTION_SELECTION_STATUS,
   SESSION_BY_MATCH,
   SUBMIT_QUESTION_SELECTION,
+  GET_USERS,
 } from "@/lib/queries";
-import { collaborationClient, questionClient } from "@/lib/apollo-client";
+import { collaborationClient, questionClient, userClient } from "@/lib/apollo-client";
 import {
   Button,
   Card,
@@ -23,6 +24,7 @@ import {
 import { PageHeader, PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { matchingSocket, SessionStartedData } from "@/lib/socket/socket";
 
 interface Question {
   id: string;
@@ -49,6 +51,12 @@ interface QuestionSelectionResponse {
   finalQuestion?: Question | null;
 }
 
+interface Participant {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
 export default function SessionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -68,6 +76,7 @@ export default function SessionPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const hasNavigatedRef = useRef(false);
 
   const {
     data: selectionData,
@@ -140,6 +149,107 @@ export default function SessionPage() {
     };
   }, [selectionStatus]);
 
+  const participantIds = useMemo(() => {
+    const ids = new Set<string>();
+    selectionStatus?.selections.forEach((entry) => {
+      if (entry.userId) {
+        ids.add(entry.userId);
+      }
+    });
+    selectionStatus?.pendingUserIds.forEach((id) => {
+      if (id) {
+        ids.add(id);
+      }
+    });
+    return Array.from(ids);
+  }, [selectionStatus]);
+
+  const { data: usersData } = useQuery<{ users: Participant[] }>(GET_USERS, {
+    client: userClient,
+    variables: { user_ids: participantIds },
+    skip: participantIds.length === 0,
+    fetchPolicy: "cache-first",
+  });
+
+  const participantsById = useMemo(() => {
+    const map = new Map<string, Participant>();
+    usersData?.users.forEach((user) => {
+      map.set(user.id, user);
+    });
+    return map;
+  }, [usersData]);
+
+  const resolveUserLabel = (userId: string) => {
+    if (!userId) {
+      return "Unknown User";
+    }
+    if (userId === activeUserId) {
+      return "You";
+    }
+    const user = participantsById.get(userId);
+    const trimmedName = user?.name?.trim();
+    if (trimmedName) {
+      return trimmedName;
+    }
+    if (user?.email) {
+      const emailName = user.email.split("@")[0];
+      if (emailName) {
+        return emailName;
+      }
+    }
+    return `User ${userId.slice(0, 8)}`;
+  };
+
+  useEffect(() => {
+    if (!activeUserId) {
+      return;
+    }
+
+    matchingSocket.auth = { userId: activeUserId };
+
+    if (!matchingSocket.connected) {
+      try {
+        matchingSocket.connect();
+      } catch (error) {
+        console.error("Failed to connect to matching socket:", error);
+      }
+    }
+  }, [activeUserId]);
+
+  useEffect(() => {
+    if (!matchId) {
+      return;
+    }
+
+    const handleSessionStarted = (payload: SessionStartedData) => {
+      if (!payload?.sessionId || payload.matchId !== matchId) {
+        return;
+      }
+
+      if (hasNavigatedRef.current) {
+        return;
+      }
+
+      hasNavigatedRef.current = true;
+
+      stopSessionPolling?.();
+      stopPolling?.();
+
+      try {
+        router.push(`/editor/${payload.sessionId}`);
+      } catch (error) {
+        hasNavigatedRef.current = false;
+        console.error("Failed to navigate to collaborative editor:", error);
+      }
+    };
+
+    matchingSocket.on("sessionStarted", handleSessionStarted);
+
+    return () => {
+      matchingSocket.off("sessionStarted", handleSessionStarted);
+    };
+  }, [matchId, router, stopPolling, stopSessionPolling]);
+
   useEffect(() => {
     if (!activeUserId) {
       setHasSubmitted(false);
@@ -178,7 +288,6 @@ export default function SessionPage() {
     };
   }, [shouldFetchSession, startSessionPolling, stopSessionPolling]);
 
-  const hasNavigatedRef = useRef(false);
   const sessionId = sessionByMatchData?.sessionByMatch?.id ?? null;
 
   useEffect(() => {
@@ -277,7 +386,7 @@ export default function SessionPage() {
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
         {selectionError && (
           <div className="rounded bg-red-100 border border-red-300 text-red-700 px-3 py-2 text-sm">
-            Failed to load selection status: {selectionError.message}
+            Failed to load selection status: {selectionError?.message ?? "Unknown error"}
           </div>
         )}
 
@@ -321,6 +430,7 @@ export default function SessionPage() {
                       const question = questionLookup.get(selection.questionId);
                       const isCurrentUser = selection.userId === activeUserId;
                       const isWinner = selection.isWinner;
+                      const displayName = resolveUserLabel(selection.userId);
                       
                       return (
                         <div
@@ -328,17 +438,17 @@ export default function SessionPage() {
                           className={`flex items-center gap-3 p-3 rounded-lg border ${
                             isWinner
                               ? "bg-green-50 border-green-200"
-                              : "bg-white border-slate-200"
+                            : "bg-white border-slate-200"
                           }`}
                         >
                           <UserAvatar 
-                            username={isCurrentUser ? "You" : selection.userId} 
+                            username={displayName} 
                             size="sm" 
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm text-slate-900">
-                                {isCurrentUser ? "You" : `User ${selection.userId.slice(0, 8)}`}
+                                {displayName}
                               </span>
                               {isWinner && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -365,25 +475,25 @@ export default function SessionPage() {
                 )}
 
                 {/* Pending Users */}
-                {selectionSummary.pendingUserIds.length > 0 && (
-                  <div className="pt-3 border-t border-slate-200">
-                    <div className="text-sm font-medium text-slate-700 mb-2">
-                      Waiting for selections:
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectionSummary.pendingUserIds.map((userId) => (
-                        <div
-                          key={userId}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200"
-                        >
-                          <UserAvatar username={userId} size="sm" />
-                          <span className="text-xs font-medium text-slate-700">
-                            {userId === activeUserId ? "You" : `User ${userId.slice(0, 8)}`}
-                          </span>
-                          <div className="flex gap-1">
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-75" />
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-150" />
+                    {selectionSummary.pendingUserIds.length > 0 && (
+                      <div className="pt-3 border-t border-slate-200">
+                        <div className="text-sm font-medium text-slate-700 mb-2">
+                          Waiting for selections:
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {selectionSummary.pendingUserIds.map((userId) => (
+                            <div
+                              key={userId}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200"
+                            >
+                              <UserAvatar username={resolveUserLabel(userId)} size="sm" />
+                              <span className="text-xs font-medium text-slate-700">
+                                {resolveUserLabel(userId)}
+                              </span>
+                              <div className="flex gap-1">
+                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
+                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-75" />
+                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-150" />
                           </div>
                         </div>
                       ))}

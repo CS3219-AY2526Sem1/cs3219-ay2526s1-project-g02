@@ -7,6 +7,7 @@ The Matching Service is responsible for pairing two users for a collaborative co
 * Real-time Matching Queue: Uses Redis to hold users actively waiting for a match.
 * Matchmaking Logic: Implements logic to pair users based on common topics and difficulty levels (e.g., 'easy', 'medium', 'hard').
 * Event Publishing: Publishes a MatchFoundPayload event to the central event bus (Pub/Sub) upon successful pairing.
+* Session Event Relay: Listens for collaboration lifecycle events and pushes `sessionStarted` notifications to clients via WebSocket.
 * Match Status Management: Updates the status of a match in the database (Supabase) upon session completion or expiry.
 * Cancel/Expiry Logic: Includes logic to handle match attempts that time out or cancelled.
 
@@ -53,10 +54,10 @@ CREATE TABLE matches (
 
 The Matching Service **publishes** and **subscribes** to events to manage the match lifecycle.
 
-| Pub/Sub           | Queue          | Description          |
-| :---------------- | :------------- | :------------------- |
-| Publishes to      | matching-queue | When match is found  |
-| Subscribes to     | session-queue  | When session ended   |
+| Pub/Sub           | Queue          | Description                           |
+| :---------------- | :------------- | :------------------------------------ |
+| Publishes to      | matching-queue | When match is found                   |
+| Subscribes to     | session-queue  | Session lifecycle events (`session_started`, `session_ended`, `session_expired`) |
 
 1. When match is found, the service publishes a MatchFoundPayload to the `matching-queue`. This is consumed by the Question Service. 
 ```ts
@@ -70,10 +71,13 @@ export interface MatchFoundPayload {
 }
 ```
 
-2. When session ended/expired, the Collaboration Service publishes a SessionEndedPayload to the `session-queue`. This is consumed by the Matching Service.
+2. When session lifecycle events occur, the Collaboration Service publishes a `SessionEventPayload` to the `session-queue`. This is consumed by the Matching Service, which:
+   - pushes a `sessionStarted` WebSocket event (containing the new `sessionId`) to both users for immediate editor navigation
+   - updates match status for `session_ended` / `session_expired`
 ```ts
 export interface SessionEventPayload {
     matchId: string;
+    sessionId: string;
     eventType: 'session_started' | 'session_ended' | 'session_expired';
     timestamp: string;
 }
@@ -88,9 +92,11 @@ The current endpoints (queries/mutations) are called by the frontend/client alon
 
 ## Socket Connection (WS)
 
-Upon arriving at the matching page, a web socket connection to the matching service is automatically established. This is for the client to receive asynchronous messages from the matching service. There are two possible asynchronous messages:
+Upon arriving at the matching page, a web socket connection to the matching service is automatically established. This is for the client to receive asynchronous messages from the matching service. There are three possible asynchronous messages:
 
-(a) `matchFound` (b) `requestExpired`
+(a) `matchFound`  
+(b) `requestExpired`  
+(c) `sessionStarted` – sent after the Collaboration Service provisions the shared editor and includes `{ matchId, sessionId }`.
 
 ## TTL Service
 
@@ -104,14 +110,16 @@ There are 4 possible 'flows' a user can experience while attempting to match wit
 
 1.  The client sends the initial match request. `findMatch` mutation sent.
 2. `findMatch` **GraphQL** response received. Match is Success. matchedUserId is sent here.
-3. `matchFound` **WS** response received. matchId is sent here. 
+3. `matchFound` **WS** response received. matchId is sent here.
+4. Once the collaboration session is created, a `sessionStarted` **WS** event arrives with the editor `sessionId`.
 
 ### Scenario 2: Match Found After Queueing
 
 1.  The client sends the initial match request. `findMatch` mutation sent.
 2. `findMatch` **GraphQL** response received. Match is Queued.
 3. ... sometime later...
-4. `matchFound` **WS** response received. matchId is sent here. 
+4. `matchFound` **WS** response received. matchId is sent here.
+5. After both users finish question selection, a `sessionStarted` **WS** event arrives with the collaborative editor `sessionId`.
 
 ### Scenario 3: Request Expired
 

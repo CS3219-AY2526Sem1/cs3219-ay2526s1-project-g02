@@ -90,4 +90,20 @@ export class MatchingGateway implements OnGatewayConnection, OnGatewayDisconnect
             this.logger.warn(`User ${userId} not found in active connections for expiration notification.`);
         }
     }
+
+    notifySessionStarted(matchId: string, sessionId: string, participantIds: string[]): void {
+        const uniqueParticipants = Array.from(new Set(participantIds));
+        const payload = { matchId, sessionId };
+
+        for (const userId of uniqueParticipants) {
+            const socket = this.activeUsers.get(userId);
+            if (!socket) {
+                this.logger.warn(`User ${userId} not connected; unable to deliver sessionStarted for match ${matchId}`);
+                continue;
+            }
+
+            socket.emit('sessionStarted', payload);
+            this.logger.log(`Notified user ${userId} of session ${sessionId} for match ${matchId}`);
+        }
+    }
 }

@@ -12,10 +12,17 @@ export interface RequestExpiredData {
     message: string;
 }
 
+// Web Socket Event (listen on: sessionStarted)
+export interface SessionStartedData {
+    matchId: string;
+    sessionId: string;
+}
+
 // What the backend will send to us
 interface ServerToClientEvents {
     matchFound: (data: MatchFoundData) => void;
     requestExpired: (data: RequestExpiredData) => void;
+    sessionStarted: (data: SessionStartedData) => void;
 }
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_MATCHING_WS_URL || 'http://localhost:4003';

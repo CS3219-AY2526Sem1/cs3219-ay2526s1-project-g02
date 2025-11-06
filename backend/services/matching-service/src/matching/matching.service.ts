@@ -144,34 +144,11 @@ export class MatchingService implements OnModuleInit {
     }
 
     async onModuleInit() {
+        this.eventBusService.registerSessionEventHandler(
+            this.handleSessionEvent.bind(this)
+        );
         await this.eventBusService.subscribeToSessionEvents();
         this.logger.log('MatchingService subscribed to receive Session Events');
-    }
-
-    // Updates DB when match ends
-    public async handleMatchEnded(payload: SessionEventPayload): Promise<void> {
-        this.logger.log(`Handling match ended for match ID ${payload.matchId}`);
-
-        if (payload.eventType !== 'session_ended' && payload.eventType !== 'session_expired') {
-            this.logger.log(`Ignoring non-terminal session event: ${payload.eventType}`);
-            return;
-        }
-
-        const newStatus = payload.eventType === 'session_ended' ? 'completed' : 'expired';
-        try {
-            const { error } = await this.supabase
-                .from('matches')
-                .update({ status: newStatus, ended_at: new Date().toISOString() })
-                .eq('id', payload.matchId);
-            
-            if (error) {
-                this.logger.error(`Failed to update match status to ${newStatus} for match ID ${payload.matchId}: ${error.message}`);
-                return;
-            }
-            this.logger.log(`Match ID ${payload.matchId} status updated to ${newStatus}`);
-        } catch (error) {
-            this.logger.error(`Fatal error while handling match ended for match ID ${payload.matchId}:`, error);
-        }
     }
 
     /* -------------------- Private Helper Methods -------------------- */
@@ -220,7 +197,7 @@ export class MatchingService implements OnModuleInit {
                 if (!potentialCandidate || !potentialCandidate.userId) {
                     throw new Error("Malformed candidate");
                 }
-            }  catch (e) {
+            } catch (e) {
                 this.logger.warn(`Failed to parse queue member JSON: ${candidateStr}`);
                 await this.redisService.removeUserFromQueue(key, candidateStr); // remove malformed entry
                 this.logger.log(`Removing malformed entry ${potentialCandidate?.userId} from queue ${key}`);
@@ -297,7 +274,7 @@ export class MatchingService implements OnModuleInit {
         // Step 2: Record the finalised match in database
         this.logger.log(`Recording finalised match in DB between ${user.userId} and ${matchedCandidate.userId}`);
 
-        const {data: matchData, error: matchError } = await this.supabase
+        const { data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
                 user1_id: user.userId,
@@ -341,6 +318,98 @@ export class MatchingService implements OnModuleInit {
             language: user.language,
             commonTopics: commonTopics,
         })
+    }
+
+    // Handle session lifecycle events routed through Pub/Sub
+    public async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
+        switch (payload.eventType) {
+            case 'session_started':
+                await this.handleSessionStarted(payload);
+                break;
+            case 'session_ended':
+            case 'session_expired':
+                await this.handleMatchEnded({ matchId: payload.matchId });
+                break;
+            default:
+                this.logger.warn(`Unhandled session event type: ${payload.eventType}`);
+        }
+    }
+
+    private async handleSessionStarted(payload: SessionEventPayload): Promise<void> {
+        const { matchId, sessionId } = payload;
+        if (!sessionId) {
+            this.logger.warn(`Session started event received without sessionId for match ${matchId}`);
+            return;
+        }
+
+        this.logger.log(`Handling session started event for match ${matchId}, session ${sessionId}`);
+
+        try {
+            const { data: matchRecord, error } = await this.supabase
+                .from('matches')
+                .select('user1_id, user2_id, status')
+                .eq('id', matchId)
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to retrieve match ${matchId} for session start: ${error.message}`);
+                return;
+            }
+
+            if (!matchRecord) {
+                this.logger.warn(`Match ${matchId} not found while handling session start`);
+                return;
+            }
+
+            const participantIds = [matchRecord.user1_id, matchRecord.user2_id].filter((id): id is string => Boolean(id));
+
+            if (participantIds.length === 0) {
+                this.logger.warn(`Match ${matchId} has no participants recorded; skipping session notification`);
+                return;
+            }
+
+            if (matchRecord.status !== 'in_session') {
+                const { error: updateError } = await this.supabase
+                    .from('matches')
+                    .update({ status: 'in_session' })
+                    .eq('id', matchId);
+
+                if (updateError) {
+                    this.logger.error(`Failed to update match ${matchId} status to in_session: ${updateError.message}`);
+                }
+            }
+
+            this.matchingGateway.notifySessionStarted(matchId, sessionId, participantIds);
+        } catch (error) {
+            this.logger.error(`Unexpected error handling session start for match ${matchId}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    // Handle match ended (upon Collab Service event)
+    private async handleMatchEnded(payload: MatchEndedPayload): Promise<void> {
+        const { matchId } = payload;
+        this.logger.log(`Handling match ended for match ID ${matchId}`);
+
+        try {
+            const { error, data } = await this.supabase
+                .from('matches')
+                .update({ status: 'ended', ended_at: new Date().toISOString() })
+                .eq('id', matchId)
+                .select();
+
+            if (error) {
+                this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);
+                return;
+            }
+
+            if (data.length > 0) {
+                this.logger.log(`Match ID ${matchId} marked as ended.`);
+            } else {
+                this.logger.warn(`No match found with ID ${matchId} to mark as ended.`);
+            }
+        } catch (error) {
+            this.logger.error(`Fatal error while handling match ended for match ID ${matchId}: ${error.message}`);
+        }
     }
 
     // Helper method to get queue key based on difficulty

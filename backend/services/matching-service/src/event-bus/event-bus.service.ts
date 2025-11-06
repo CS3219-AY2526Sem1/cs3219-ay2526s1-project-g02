@@ -13,6 +13,7 @@ import { MatchingService } from "src/matching/matching.service";
 export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(EventBusService.name);
     private pubsubService: PubSubService;
+    private sessionEventHandler?: (payload: SessionEventPayload) => Promise<void>;
 
     constructor(
         private readonly configService: ConfigService,
@@ -70,27 +71,28 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
 
     /**
      * Subscribe to session events from Collaboration Service
-     */
+    */
     public async subscribeToSessionEvents(): Promise<void> {
         await this.pubsubService.subscribe<SessionEventPayload>(
             SUBSCRIPTIONS.SESSION_QUEUE_SUB,
             async (data) => {
-                await this.handleSessionEvent(data);
+                this.logger.log(`Received session event: ${data.eventType} for match ${data.matchId}`);
+
+                if (this.sessionEventHandler) {
+                    try {
+                        await this.sessionEventHandler(data);
+                    } catch (error) {
+                        this.logger.error(
+                            `Error while handling session event ${data.eventType} for match ${data.matchId}:`,
+                            error,
+                        );
+                    }
+                } else {
+                    this.logger.warn('Session event received but no handler registered');
+                }
             }
         );
         this.logger.log(`Subscribed to ${SUBSCRIPTIONS.SESSION_QUEUE_SUB}`);
-    }
-
-    /**
-     * Handle session events (session ended, expired, etc.)
-     */
-    private async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
-        this.logger.log(`Received session event: ${payload.eventType} for match ${payload.matchId}`);
-
-        if (payload.eventType === 'session_ended' || payload.eventType === 'session_expired') {
-            await this.matchingService.handleMatchEnded(payload);
-            this.logger.log(`Updated match ${payload.matchId} status to completed`);
-        }
     }
 
     /**
@@ -98,5 +100,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      */
     public getPubSubService(): PubSubService {
         return this.pubsubService;
+    }
+
+    /**
+     * Register a handler for session lifecycle events
+     */
+    public registerSessionEventHandler(handler: (payload: SessionEventPayload) => Promise<void>): void {
+        this.sessionEventHandler = handler;
+        this.logger.log('Session event handler registered');
     }
 }
