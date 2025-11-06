@@ -60,6 +60,7 @@ export const mockCheckService = {
 
 export const mockEventBusService = {
     publishMatchFound: jest.fn(),
+    subscribeToSessionEvents: jest.fn(),
 };
 
 export const mockSupabaseClient = {

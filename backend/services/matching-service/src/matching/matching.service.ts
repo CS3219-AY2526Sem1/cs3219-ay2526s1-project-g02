@@ -18,7 +18,7 @@ interface MatchEndedPayload {
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
 const CANDIDATE_PEEK_COUNT = 50;
-const QUEUE_TTL_SECONDS = 120; // 2 minutes for debugging. TODO: CHANGE TO 5 MINUTES
+const QUEUE_TTL_SECONDS = 120; // 2 minutes.
 
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
@@ -143,10 +143,12 @@ export class MatchingService implements OnModuleInit {
 
     }
 
-    onModuleInit() {
-        this.eventBusService.registerSessionEventHandler(async (payload) => {
-            await this.handleSessionEvent(payload);
-        });
+    async onModuleInit() {
+        this.eventBusService.registerSessionEventHandler(
+            this.handleSessionEvent.bind(this)
+        );
+        await this.eventBusService.subscribeToSessionEvents();
+        this.logger.log('MatchingService subscribed to receive Session Events');
     }
 
     /* -------------------- Private Helper Methods -------------------- */
@@ -195,7 +197,7 @@ export class MatchingService implements OnModuleInit {
                 if (!potentialCandidate || !potentialCandidate.userId) {
                     throw new Error("Malformed candidate");
                 }
-            }  catch (e) {
+            } catch (e) {
                 this.logger.warn(`Failed to parse queue member JSON: ${candidateStr}`);
                 await this.redisService.removeUserFromQueue(key, candidateStr); // remove malformed entry
                 this.logger.log(`Removing malformed entry ${potentialCandidate?.userId} from queue ${key}`);
@@ -272,7 +274,7 @@ export class MatchingService implements OnModuleInit {
         // Step 2: Record the finalised match in database
         this.logger.log(`Recording finalised match in DB between ${user.userId} and ${matchedCandidate.userId}`);
 
-        const {data: matchData, error: matchError } = await this.supabase
+        const { data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
                 user1_id: user.userId,
@@ -304,7 +306,7 @@ export class MatchingService implements OnModuleInit {
             matchData!.id,
         )
 
-        // Step 4: Publish to Event Bus (to notify Collaboration Service)
+        // Step 4: Publish to Event Bus (to notify Question Service)
         this.logger.log(`Publishing match found event for match ID ${matchData!.id} to Event Bus`);
         const user1TopicsSet = new Set(user.topics);
         const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
@@ -319,7 +321,7 @@ export class MatchingService implements OnModuleInit {
     }
 
     // Handle session lifecycle events routed through Pub/Sub
-    private async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
+    public async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
         switch (payload.eventType) {
             case 'session_started':
                 await this.handleSessionStarted(payload);
@@ -390,10 +392,10 @@ export class MatchingService implements OnModuleInit {
 
         try {
             const { error, data } = await this.supabase
-            .from('matches')
-            .update({ status: 'ended', ended_at: new Date().toISOString() })
-            .eq('id', matchId)
-            .select();
+                .from('matches')
+                .update({ status: 'ended', ended_at: new Date().toISOString() })
+                .eq('id', matchId)
+                .select();
 
             if (error) {
                 this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);

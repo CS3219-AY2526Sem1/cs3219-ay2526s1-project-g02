@@ -17,6 +17,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { TerminateSessionModal } from "@/components/TerminateSessionModal";
 import { SessionTerminatedModal } from "@/components/SessionTerminatedModal";
+import { QuestionExplanation } from "@/components/QuestionExplanation";
+import { AiChat } from "@/components/AiChat";
+import { Chat } from "@/components/Chat";
 
 type Question = {
   id: string;
@@ -97,6 +100,8 @@ export default function EditorPage() {
   });
 
   const matchUsers = usersData?.users || [];
+  const currentUser = matchUsers.find((user: User) => user.id === userId);
+  const currentUserName = currentUser?.name || "User";
 
   // Handle query errors
   useEffect(() => {
@@ -338,7 +343,7 @@ export default function EditorPage() {
     <PageLayout header={<NavBar></NavBar>}>
       <div className="flex h-[calc(100vh-64px)] w-screen ">
         {/* Left Sidebar */}
-        <div className="w-80 h-full bg-white border-r border-gray-200 flex flex-col px-6 pb-8">
+        <div className="w-1/2 h-full bg-white border-r border-gray-200 flex flex-col px-6 pb-8">
           <Sidebar
             title=""
             bottomContent={
@@ -368,6 +373,7 @@ export default function EditorPage() {
                   <p className="text-sm text-gray-600 leading-relaxed">
                     {sessionData.question.description}
                   </p>
+                  <QuestionExplanation questionId={sessionData.question.id} />
                 </div>
               )}
 
@@ -493,6 +499,23 @@ export default function EditorPage() {
           isOpen={showTerminatedModal}
           onGoHome={() => router.push("/")}
         />
+
+        {/* AI Chat - Only show if we have a question */}
+        {sessionData.question && (
+          <AiChat
+            questionId={sessionData.question.id}
+            getCurrentCode={() => webSocketService?.getCurrentCode() || ""}
+          />
+        )}
+
+        {/* Team Chat - Only show if websocket is connected */}
+        {webSocketService && userId && (
+          <Chat
+            webSocketService={webSocketService}
+            currentUserId={userId}
+            currentUserName={currentUserName}
+          />
+        )}
       </div>
     </PageLayout>
   ) : (

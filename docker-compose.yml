@@ -220,8 +220,9 @@ services:
     environment:
       - PORT=4005
       - NODE_ENV=${NODE_ENV:-development}
-      - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - MATCHING_SERVICE_URL=http://matching-service:4003
