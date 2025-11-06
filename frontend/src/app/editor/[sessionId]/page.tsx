@@ -121,19 +121,18 @@ export default function EditorPage() {
     const _message = isConnected
       ? "🌎 Connected to server!"
       : "🔴 Connection closed";
-    console.log(_message);
   };
 
   const handleOnSync = (isSynced: boolean) => {
-    console.log("🔄 Synced: ", isSynced);
+    // Sync status changed
   };
 
   const handleOnConnectionError = (event: Event) => {
-    console.log("❌ Connection error: ", event);
+    // Connection error occurred
   };
 
   const handleOnConnectionClosed = () => {
-    console.log("🔴 Connection closed");
+    // Connection closed
   };
 
   // Initialize WebSocketService only on client side
@@ -185,7 +184,6 @@ export default function EditorPage() {
             // Only process events from the last 10 seconds and only once
             const eventAge = Date.now() - event.timestamp;
             if (eventAge < 10000 && !processedEvents.has(event.timestamp)) {
-              console.log("Session terminated by user:", state.userId);
               setProcessedEvents((prev) => new Set(prev).add(event.timestamp));
               setShowTerminatedModal(true);
             }

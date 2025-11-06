@@ -96,8 +96,6 @@ export class QuestionsService implements OnModuleInit {
     this.eventBusService.registerMatchFoundHandler(async (payload) => {
       await this.handleMatchFound(payload);
     });
-
-    this.logger.log('Match found handler registered for question assignments');
   }
 
   async findAll(): Promise<Question[]> {
@@ -421,10 +419,6 @@ export class QuestionsService implements OnModuleInit {
 
       const normalizedDifficulty = this.normalizeDifficultyForQuery(difficulty);
 
-      this.logger.log(
-        `Filtering questions for match ${matchId}: difficulty=${normalizedDifficulty}, topics=${topics.join(', ')}`,
-      );
-
       // Strategy 1: Try with difficulty + categories
       if (topics.length > 0) {
         const questions = await this.findQuestionsByDifficultyAndCategories(
@@ -432,9 +426,6 @@ export class QuestionsService implements OnModuleInit {
           topics,
         );
         if (questions.length > 0) {
-          this.logger.log(
-            `Found ${questions.length} questions matching difficulty + categories for match ${matchId}`,
-          );
           return questions;
         }
       }
@@ -443,15 +434,11 @@ export class QuestionsService implements OnModuleInit {
       if (normalizedDifficulty) {
         const questions = await this.findByDifficulty(normalizedDifficulty);
         if (questions.length > 0) {
-          this.logger.log(
-            `Found ${questions.length} questions matching difficulty only for match ${matchId}`,
-          );
           return questions;
         }
       }
 
       // Strategy 3: Return all questions
-      this.logger.log(`No filtered questions found, returning all questions for match ${matchId}`);
       return this.findAll();
     } catch (error) {
       this.logger.error(
@@ -498,10 +485,6 @@ export class QuestionsService implements OnModuleInit {
    * Updates the match record with difficulty and topics as a backup.
    */
   private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
-    this.logger.log(
-      `Match ${payload.matchId} ready for manual question selection. Waiting for participant submissions.`,
-    );
-
     try {
       // Clear any existing selections for this match
       const { error: deleteError } = await this.supabase
@@ -527,10 +510,6 @@ export class QuestionsService implements OnModuleInit {
       if (updateError) {
         this.logger.warn(
           `Could not update match ${payload.matchId} with criteria: ${updateError.message}`,
-        );
-      } else {
-        this.logger.log(
-          `Updated match ${payload.matchId} with difficulty=${payload.difficulty}, topics=${payload.commonTopics.join(', ')}`,
         );
       }
     } catch (error) {
@@ -753,11 +732,6 @@ export class QuestionsService implements OnModuleInit {
           `Failed to log question attempts for match ${matchId}:`,
           error,
         );
-        // Don't throw - logging attempts shouldn't block the main flow
-      } else {
-        this.logger.log(
-          `Logged ${participants.length} question attempt(s) for match ${matchId}, question ${questionId}`,
-        );
       }
     } catch (error) {
       this.logger.error('Error logging question attempts:', error);
@@ -769,8 +743,6 @@ export class QuestionsService implements OnModuleInit {
    */
   async getQuestionAttemptsByUser(userId: string): Promise<any[]> {
     try {
-      this.logger.log(`Attempting to fetch question attempts for user: ${userId}`);
-      
       const { data, error } = await this.supabase
         .from('question_attempts')
         .select(`
@@ -792,31 +764,8 @@ export class QuestionsService implements OnModuleInit {
         .order('attempted_at', { ascending: false });
 
       if (error) {
-        this.logger.error(`Failed to fetch question attempts for user ${userId}:`, error);
-        this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+        this.logger.error(`Failed to fetch question attempts for user ${userId}:`, error.message);
         throw new Error(`Failed to fetch question attempts: ${error.message}`);
-      }
-
-      this.logger.log(`Fetched ${(data || []).length} question attempts for user ${userId}`);
-      if (data && data.length > 0) {
-        this.logger.log(`Sample attempt structure:`, JSON.stringify(data[0], null, 2));
-      } else {
-        this.logger.warn(`No attempts found. Checking if table has any data at all...`);
-        
-        // Debug query to see if table has any data
-        const { data: allData, error: allError } = await this.supabase
-          .from('question_attempts')
-          .select('id, user_id')
-          .limit(5);
-        
-        if (allError) {
-          this.logger.error(`Debug query failed:`, allError);
-        } else {
-          this.logger.log(`Total sample records in table: ${(allData || []).length}`);
-          if (allData && allData.length > 0) {
-            this.logger.log(`Sample user IDs in table:`, allData.map(d => d.user_id));
-          }
-        }
       }
 
       return (data || []).map((attempt) => {
@@ -854,8 +803,6 @@ export class QuestionsService implements OnModuleInit {
    */
   async getSuggestedSolutionsForQuestion(questionId: string): Promise<any[]> {
     try {
-      this.logger.log(`Fetching suggested solutions for question: ${questionId}`);
-      
       const { data, error } = await this.supabase
         .from('suggested_solutions')
         .select('*')
@@ -866,8 +813,6 @@ export class QuestionsService implements OnModuleInit {
         this.logger.error(`Failed to fetch suggested solutions for question ${questionId}:`, error);
         throw new Error(`Failed to fetch suggested solutions: ${error.message}`);
       }
-
-      this.logger.log(`Fetched ${(data || []).length} suggested solution(s) for question ${questionId}`);
 
       return (data || []).map((solution) => ({
         id: solution.id,

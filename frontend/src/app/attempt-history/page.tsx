@@ -36,16 +36,7 @@ export default function AttemptHistoryPage() {
     variables: { userId },
     skip: !userId,
     client: questionClient,
-    fetchPolicy: "network-only",
-  });
-
-  // Debug logging
-  console.log('Attempt History Debug:', {
-    userId,
-    loading,
-    error: error?.message,
-    dataReceived: data,
-    attemptsCount: data?.questionAttemptsByUser?.length,
+    fetchPolicy: "cache-and-network", // Use cache first, then update from network
   });
 
   if (authLoading) {
