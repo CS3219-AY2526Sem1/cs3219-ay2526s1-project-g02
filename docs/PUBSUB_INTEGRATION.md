@@ -97,10 +97,13 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
   ```typescript
   interface SessionEventPayload {
     matchId: string;
+    sessionId: string;
     eventType: 'session_started' | 'session_ended' | 'session_expired';
     timestamp: string;
   }
   ```
+
+  The `sessionId` identifies the collaboration session for both start and end events. When `eventType === 'session_started'`, the Matching Service forwards that identifier over WebSocket so the frontend can navigate directly to the collaborative editor without polling.
 
 ## Setup Instructions
 

@@ -10,6 +10,8 @@ The Question Service manages coding questions and problems for the NoClue platfo
 - ✅ Random question allocation for collaboration sessions with filters (FR17)
 - ✅ Test cases with structured input/output in JSON format (FR18)
 - ✅ Retrieve test cases for questions during sessions (FR18.1)
+- ✅ Pub/Sub integration for match events and question assignments
+- ✅ Question selection workflow with GraphQL mutation + status polling helpers
 - ✅ GraphQL API with interactive playground
 - ✅ Supabase integration for data persistence
 
@@ -145,7 +147,33 @@ CREATE TRIGGER update_test_cases_updated_at
 
 ---
 
-#### Step 3: Verify Tables
+#### Step 3: Create Question Selection Table
+
+This table records each participant’s question pick for a match and tracks the final winner once both users have submitted.
+
+```sql
+create extension if not exists "pgcrypto";
+
+create table if not exists public.question_selections (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid not null references public.matches(id) on delete cascade,
+  user_id uuid not null,
+  question_id uuid not null references public.questions(id) on delete cascade,
+  is_winner boolean,
+  submitted_at timestamptz default now(),
+  finalized_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create unique index if not exists question_selections_match_user_idx
+  on public.question_selections(match_id, user_id);
+```
+
+The service uses this table to compute the winning question and emit the `QuestionAssigned` Pub/Sub message consumed by the Collaboration Service.
+
+---
+
+#### Step 4: Verify Tables
 
 Run this query to verify that both tables were created successfully:
 
@@ -192,6 +220,21 @@ The service will start on `http://localhost:4002`
 **GraphQL Playground:** `http://localhost:4002/graphql`
 
 ## API Documentation
+
+### Pub/Sub & Selection Overview
+
+The Question Service sits between the Matching and Collaboration services in the event-driven flow:
+
+1. **MatchFound** message arrives from `matching-queue` (published by the Matching Service).  
+2. Depending on configuration, the Question Service either auto-assigns a question or waits for both users to submit a pick via GraphQL.  
+3. When both selections are in, the service picks a winner, updates `question_selections`, and publishes a `QuestionAssigned` payload to `question-queue`.  
+4. The Collaboration Service provisions the editor session and sends a `session_started` lifecycle event (with the new `sessionId`) back through Pub/Sub.
+
+Key GraphQL operations that back the manual selection flow:
+- `submitQuestionSelection(input: SubmitQuestionSelectionInput!)`
+- `questionSelectionStatus(matchId: ID!)`
+
+Both operations are documented below.
 
 ### Queries
 
@@ -406,6 +449,59 @@ mutation {
     id
     title
     difficulty
+  }
+}
+```
+
+#### Submit Question Selection
+
+Used by the frontend when users pick their preferred question for a match.
+
+```graphql
+mutation SubmitQuestionSelection($input: SubmitQuestionSelectionInput!) {
+  submitQuestionSelection(input: $input) {
+    status
+    pendingUserIds
+    selections {
+      userId
+      questionId
+      isWinner
+      submittedAt
+      finalizedAt
+    }
+    finalQuestion {
+      id
+      title
+      difficulty
+      category
+      description
+    }
+  }
+}
+```
+
+- When both users have submitted, the service marks a winner, publishes a `QuestionAssigned` event, and returns `status = COMPLETE`.
+- If a question was already assigned earlier in the match lifecycle (e.g., automated pick on `MatchFound`), the same mutation responds with `status = ALREADY_ASSIGNED`.
+
+#### Check Question Selection Status
+
+Clients poll this query while waiting for the other participant or for the final decision to propagate.
+
+```graphql
+query QuestionSelectionStatus($matchId: ID!) {
+  questionSelectionStatus(matchId: $matchId) {
+    status
+    pendingUserIds
+    selections {
+      userId
+      questionId
+      isWinner
+    }
+    finalQuestion {
+      id
+      title
+      difficulty
+    }
   }
 }
 ```

@@ -109,7 +109,7 @@ interface QuestionAssignedPayload {
    - `language`: Default 'javascript'
    - `status`: 'active'
 2. Initializes YJS document for the session
-3. Publishes `session_started` event
+3. Publishes `session_started` event (including the new `sessionId`)
 
 ### Outgoing: SessionEvent
 
@@ -118,6 +118,7 @@ interface QuestionAssignedPayload {
 ```typescript
 interface SessionEventPayload {
   matchId: string;
+  sessionId: string;
   eventType: 'session_started' | 'session_ended' | 'session_expired';
   timestamp: string;
 }
@@ -268,4 +269,3 @@ Created YJS document for session session-uuid
 - [ ] Code execution integration
 - [ ] Session timeout handling
 - [ ] Automatic session cleanup for ended matches
-
