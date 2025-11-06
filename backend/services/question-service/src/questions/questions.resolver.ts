@@ -193,6 +193,13 @@ export class QuestionsResolver {
     return this.questionsService.findByCategory(category);
   }
 
+  @Query(() => [Question], { description: 'Get questions for match selection, filtered by match criteria (difficulty + categories → difficulty → all)' })
+  async questionsForMatchSelection(
+    @Args('matchId', { type: () => ID }) matchId: string,
+  ) {
+    return this.questionsService.getQuestionsForMatchSelection(matchId);
+  }
+
   @Query(() => [Question], { description: 'Allocate K random questions for a session with optional filters' })
   async allocateQuestionsForSession(
     @Args('count', { type: () => Number, description: 'Number of questions to allocate' }) count: number,

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
 import {
-  GET_QUESTIONS,
+  GET_QUESTIONS_FOR_MATCH,
   QUESTION_SELECTION_STATUS,
   SESSION_BY_MATCH,
   SUBMIT_QUESTION_SELECTION,
@@ -69,8 +69,10 @@ export default function SessionPage() {
     loading: questionsLoading,
     error: questionsError,
     data: questionsData,
-  } = useQuery(GET_QUESTIONS, {
+  } = useQuery(GET_QUESTIONS_FOR_MATCH, {
     client: questionClient,
+    variables: { matchId },
+    skip: !matchId,
   });
 
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function SessionPage() {
     selectionStatus?.status === "COMPLETE" ||
     selectionStatus?.status === "ALREADY_ASSIGNED";
 
-  const questions: Question[] = questionsData?.questions || [];
+  const questions: Question[] = questionsData?.questionsForMatchSelection || [];
 
   const shouldFetchSession =
     selectionStatus?.status === "COMPLETE" && Boolean(matchId);

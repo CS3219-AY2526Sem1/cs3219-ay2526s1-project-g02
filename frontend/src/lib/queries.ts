@@ -15,6 +15,20 @@ export const GET_QUESTIONS = gql`
   }
 `;
 
+export const GET_QUESTIONS_FOR_MATCH = gql`
+  query GetQuestionsForMatch($matchId: ID!) {
+    questionsForMatchSelection(matchId: $matchId) {
+      id
+      title
+      difficulty
+      category
+      description
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 export const GET_QUESTION = gql`
   query GetQuestion($id: String!) {
     question(id: $id) {

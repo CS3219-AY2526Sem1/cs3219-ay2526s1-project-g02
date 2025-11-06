@@ -388,7 +388,114 @@ export class QuestionsService implements OnModuleInit {
   }
 
   /**
-   * Handle match found event by selecting a question and publishing it.
+   * Get questions for user selection in a match, filtered by difficulty and categories.
+   * Uses fallback strategy: try difficulty + categories → difficulty only → all questions
+   * @param matchId The match ID to fetch criteria for
+   * @returns Array of questions matching the criteria (with fallback)
+   */
+  async getQuestionsForMatchSelection(matchId: string): Promise<Question[]> {
+    try {
+      // Fetch the match with all needed fields in a single query
+      const { data: match, error: matchError } = await this.supabase
+        .from('matches')
+        .select('id, user1_id, user2_id, status, difficulty, common_topics')
+        .eq('id', matchId)
+        .single();
+
+      if (matchError || !match) {
+        this.logger.warn(
+          `Match ${matchId} not found (${matchError?.message || 'no data'}), returning all questions`,
+        );
+        return this.findAll();
+      }
+
+      if (match.status && match.status !== 'active') {
+        this.logger.warn(`Match ${matchId} is not active (status=${match.status}), returning all questions`);
+        return this.findAll();
+      }
+
+      const difficulty = match.difficulty;
+      const topics = Array.isArray(match.common_topics) 
+        ? match.common_topics.filter(Boolean) 
+        : [];
+
+      const normalizedDifficulty = this.normalizeDifficultyForQuery(difficulty);
+
+      this.logger.log(
+        `Filtering questions for match ${matchId}: difficulty=${normalizedDifficulty}, topics=${topics.join(', ')}`,
+      );
+
+      // Strategy 1: Try with difficulty + categories
+      if (topics.length > 0) {
+        const questions = await this.findQuestionsByDifficultyAndCategories(
+          normalizedDifficulty,
+          topics,
+        );
+        if (questions.length > 0) {
+          this.logger.log(
+            `Found ${questions.length} questions matching difficulty + categories for match ${matchId}`,
+          );
+          return questions;
+        }
+      }
+
+      // Strategy 2: Try with difficulty only
+      if (normalizedDifficulty) {
+        const questions = await this.findByDifficulty(normalizedDifficulty);
+        if (questions.length > 0) {
+          this.logger.log(
+            `Found ${questions.length} questions matching difficulty only for match ${matchId}`,
+          );
+          return questions;
+        }
+      }
+
+      // Strategy 3: Return all questions
+      this.logger.log(`No filtered questions found, returning all questions for match ${matchId}`);
+      return this.findAll();
+    } catch (error) {
+      this.logger.error(
+        `Error fetching questions for match selection (${matchId}):`,
+        error,
+      );
+      // On error, return all questions as fallback
+      return this.findAll();
+    }
+  }
+
+  /**
+   * Find questions matching both difficulty and categories
+   * @param difficulty The difficulty level
+   * @param categories Array of categories
+   * @returns Array of questions matching both criteria
+   */
+  private async findQuestionsByDifficultyAndCategories(
+    difficulty: string,
+    categories: string[],
+  ): Promise<Question[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('difficulty', difficulty)
+        .overlaps('category', categories)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching questions by difficulty and categories:', error);
+        return [];
+      }
+
+      return (data || []).map(this.mapToQuestion);
+    } catch (error) {
+      this.logger.error('Exception in findQuestionsByDifficultyAndCategories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Handle match found event by preparing for manual question selection.
+   * Updates the match record with difficulty and topics as a backup.
    */
   private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
     this.logger.log(
@@ -396,51 +503,40 @@ export class QuestionsService implements OnModuleInit {
     );
 
     try {
-      const { error } = await this.supabase
+      // Clear any existing selections for this match
+      const { error: deleteError } = await this.supabase
         .from('question_selections')
         .delete()
         .eq('match_id', payload.matchId);
 
-      if (error) {
+      if (deleteError) {
         this.logger.error(
-          `Failed to clear existing selections for match ${payload.matchId}: ${error.message}`,
+          `Failed to clear existing selections for match ${payload.matchId}: ${deleteError.message}`,
+        );
+      }
+
+      // Update match record with difficulty and topics (backup in case matching service didn't set them)
+      const { error: updateError } = await this.supabase
+        .from('matches')
+        .update({
+          difficulty: payload.difficulty,
+          common_topics: payload.commonTopics,
+        })
+        .eq('id', payload.matchId);
+
+      if (updateError) {
+        this.logger.warn(
+          `Could not update match ${payload.matchId} with criteria: ${updateError.message}`,
+        );
+      } else {
+        this.logger.log(
+          `Updated match ${payload.matchId} with difficulty=${payload.difficulty}, topics=${payload.commonTopics.join(', ')}`,
         );
       }
     } catch (error) {
       this.logger.error(`Error while preparing manual selection for match ${payload.matchId}`, error);
     }
   }
-
-  /**
-   * Determine a suitable question for the match using fallback strategies.
-   */
-  private async pickQuestionForMatch(payload: MatchFoundPayload): Promise<Question | null> {
-    const normalizedDifficulty = this.normalizeDifficultyForQuery(payload.difficulty);
-    const topics = Array.isArray(payload.commonTopics)
-      ? payload.commonTopics.filter(Boolean)
-      : [];
-
-    const strategies: Array<{ difficulty?: string; categories?: string[] }> = [
-      { difficulty: normalizedDifficulty, categories: topics },
-      { difficulty: normalizedDifficulty },
-      {},
-    ];
-
-    for (const strategy of strategies) {
-      const questions = await this.findRandomQuestions(
-        1,
-        strategy.difficulty,
-        strategy.categories && strategy.categories.length > 0 ? strategy.categories : undefined,
-      );
-
-      if (questions.length > 0) {
-        return questions[0];
-      }
-    }
-
-    return null;
-  }
-
   /**
    * Normalize difficulty strings for Supabase queries.
    */
