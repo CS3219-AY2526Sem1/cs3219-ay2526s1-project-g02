@@ -165,7 +165,6 @@ export default function MatchingPage() {
         !result.queued &&
         result.reason === "User already in active match"
       ) {
-        console.warn("User is already in an active match.");
         setStatus("ERROR");
         setNotification({
           message: "You are already in an active match.",
@@ -242,7 +241,6 @@ export default function MatchingPage() {
   const handleCancelMatch = () => {
     const requestId = matchResult?.requestId;
     if (status !== "QUEUED" || !requestId) {
-      console.warn("No active match request to cancel.");
       return;
     }
     if (canceling) return; // Prevent multiple requests
