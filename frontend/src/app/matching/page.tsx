@@ -165,7 +165,6 @@ export default function MatchingPage() {
         !result.queued &&
         result.reason === "User already in active match"
       ) {
-        console.warn("User is already in an active match.");
         setStatus("ERROR");
         setNotification({
           message: "You are already in an active match.",
@@ -175,7 +174,6 @@ export default function MatchingPage() {
       }
 
       if (result.matchFound) {
-        console.log("Match found immediately:", result);
         setStatus("MATCH_FOUND");
         setNotification({
           message: "Match found successfully!",
@@ -183,7 +181,6 @@ export default function MatchingPage() {
         });
         // TODO: Show matchedUserId somewhere in the UI
       } else if (result.queued) {
-        console.log("No immediate match, queued for matching:", result);
         setStatus("QUEUED");
       }
     },
@@ -204,7 +201,6 @@ export default function MatchingPage() {
       onCompleted(data) {
         const result = data.cancelMatchRequest;
         if (result.success) {
-          console.log("Match request cancelled successfully");
           setStatus("CANCELLED");
           setNotification({
             message: "Match request cancelled successfully.",
@@ -245,7 +241,6 @@ export default function MatchingPage() {
   const handleCancelMatch = () => {
     const requestId = matchResult?.requestId;
     if (status !== "QUEUED" || !requestId) {
-      console.warn("No active match request to cancel.");
       return;
     }
     if (canceling) return; // Prevent multiple requests
@@ -255,16 +250,13 @@ export default function MatchingPage() {
   // 3. Initial Socket.IO Connection
   useEffect(() => {
     if (!ACTIVE_USER_ID) {
-        console.log("No valid user ID to initialize socket.");
         return;
     }
 
     matchingSocket.auth = { userId: ACTIVE_USER_ID };
-    console.log("Set socket auth with userId:", { userId: ACTIVE_USER_ID });
 
     if (!matchingSocket.connected) {
       matchingSocket.connect();
-      console.log("Attempting initial socket connection...");
     }
 
     const onConnect = () => setSocketStatus("connected");
@@ -284,7 +276,6 @@ export default function MatchingPage() {
   useEffect(() => {
     // Event Listener for 'matchFound' (i.e. match found after being queued)
     const handleMatchFoundEvent = (data: MatchFoundData) => {
-      console.log("Match found!", data);
       setFinalMatchData(data);
 
       if (status !== "MATCH_FOUND") {
@@ -300,7 +291,6 @@ export default function MatchingPage() {
     // Event Listener for 'requestExpired' (i.e. match request expired)
     const handleRequestExpiredEvent = (data: RequestExpiredData) => {
       if (status === "QUEUED") {
-        console.log("Match request expired:", data);
         setStatus("REQUEST_EXPIRED");
         setMatchResult(null);
         setNotification({
@@ -489,10 +479,8 @@ export default function MatchingPage() {
               <Button
                 onClick={() => {
                   if (!finalMatchData?.matchId) {
-                    console.warn("Match ID not ready yet. Waiting for event payload.");
                     return;
                   }
-                  console.log("Navigating to session with match:", finalMatchData.matchId);
                   router.push(`/question-selection?matchId=${finalMatchData.matchId}`);
                 }}
                 variant="primary"

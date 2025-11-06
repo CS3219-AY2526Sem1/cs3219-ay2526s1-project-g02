@@ -5,9 +5,10 @@ Microservices-based coding platform with Next.js frontend and NestJS backend, de
 ## Quick Links
 
 - [Setup Guide](./docs/SETUP.md) - First-time deployment and local development
-- [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging architecture
+- [Question Service](backend/services/question-service/README.md) - Complete API & SQL setup
+- [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging
+- [Attempt History](docs/ATTEMPT_HISTORY_IMPLEMENTATION.md) - User attempt tracking
 - [Troubleshooting](./docs/TROUBLESHOOTING.md) - Debug common issues
-- [Disaster Recovery](./docs/DISASTER_RECOVERY.md) - Emergency procedures and backups
 
 ## Architecture Overview
 
@@ -472,6 +473,7 @@ See [Setup Guide](./docs/SETUP.md) for cost optimization tips.
 
 - [Setup Guide](./docs/SETUP.md) - Complete setup and configuration
 - [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md) - Messaging architecture and setup
+- [Attempt History](./docs/ATTEMPT_HISTORY_IMPLEMENTATION.md) - Question attempts & solutions
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Debug common issues
 - [Disaster Recovery Guide](./docs/DISASTER_RECOVERY.md) - Backups and emergency procedures
 

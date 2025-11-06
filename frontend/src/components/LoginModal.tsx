@@ -34,14 +34,13 @@ export default function LoginModal() {
           variables: { input: { email, password } },
         }),
       });
-      console.log("RES", res);
+
       if (!res.ok) {
-        console.error("HTTP", res.status, await res.text()); // you'll see class-validator errors here
+        console.error("HTTP", res.status, await res.text());
         return;
       }
 
       const json = await res.json();
-      console.log("JSON", json);
 
       if (json.errors?.length) {
         setError("Invalid email or password");
@@ -51,9 +50,7 @@ export default function LoginModal() {
       const payload = json.data.login;
 
       const access_token = payload?.access_token ?? null;
-      console.log("ACCESS TOK", access_token);
       const refresh_token = payload?.refresh_token ?? null;
-      console.log("REFRESH TOK", refresh_token);
 
       const { error } = await supabase.auth.setSession({
         access_token,

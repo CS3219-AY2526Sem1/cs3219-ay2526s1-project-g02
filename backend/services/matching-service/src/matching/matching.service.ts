@@ -274,12 +274,18 @@ export class MatchingService implements OnModuleInit {
         // Step 2: Record the finalised match in database
         this.logger.log(`Recording finalised match in DB between ${user.userId} and ${matchedCandidate.userId}`);
 
+        // Calculate common topics
+        const user1TopicsSet = new Set(user.topics);
+        const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
+
         const { data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
                 user1_id: user.userId,
                 user2_id: matchedCandidate.userId,
                 status: 'active',
+                difficulty: user.difficulty,
+                common_topics: commonTopics,
             })
             .select('id')
             .single();
@@ -308,8 +314,6 @@ export class MatchingService implements OnModuleInit {
 
         // Step 4: Publish to Event Bus (to notify Question Service)
         this.logger.log(`Publishing match found event for match ID ${matchData!.id} to Event Bus`);
-        const user1TopicsSet = new Set(user.topics);
-        const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
         this.eventBusService.publishMatchFound({
             matchId: matchData!.id,
             user1Id: user.userId,
@@ -368,16 +372,16 @@ export class MatchingService implements OnModuleInit {
                 return;
             }
 
-            if (matchRecord.status !== 'in_session') {
-                const { error: updateError } = await this.supabase
-                    .from('matches')
-                    .update({ status: 'in_session' })
-                    .eq('id', matchId);
+        if (matchRecord.status !== 'active') {
+            const { error: updateError } = await this.supabase
+                .from('matches')
+                .update({ status: 'active' })
+                .eq('id', matchId);
 
-                if (updateError) {
-                    this.logger.error(`Failed to update match ${matchId} status to in_session: ${updateError.message}`);
-                }
+            if (updateError) {
+                this.logger.error(`Failed to update match ${matchId} status to active: ${updateError.message}`);
             }
+        }
 
             this.matchingGateway.notifySessionStarted(matchId, sessionId, participantIds);
         } catch (error) {

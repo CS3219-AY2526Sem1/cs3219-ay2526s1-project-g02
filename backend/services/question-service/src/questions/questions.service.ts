@@ -96,8 +96,6 @@ export class QuestionsService implements OnModuleInit {
     this.eventBusService.registerMatchFoundHandler(async (payload) => {
       await this.handleMatchFound(payload);
     });
-
-    this.logger.log('Match found handler registered for question assignments');
   }
 
   async findAll(): Promise<Question[]> {
@@ -357,6 +355,9 @@ export class QuestionsService implements OnModuleInit {
       })),
     });
 
+    // Log question attempts for both users
+    await this.logQuestionAttempts(matchId, winningQuestion.id, participants);
+
     const finalizedSelections = await this.fetchSelections(matchId);
     return this.buildSelectionResult('COMPLETE', participants, finalizedSelections, winningQuestion);
   }
@@ -385,76 +386,136 @@ export class QuestionsService implements OnModuleInit {
   }
 
   /**
-   * Handle match found event by selecting a question and publishing it.
+   * Get questions for user selection in a match, filtered by difficulty and categories.
+   * Uses fallback strategy: try difficulty + categories → difficulty only → all questions
+   * @param matchId The match ID to fetch criteria for
+   * @returns Array of questions matching the criteria (with fallback)
    */
-  private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
-    this.logger.log(`Selecting question for match ${payload.matchId}`);
-
+  async getQuestionsForMatchSelection(matchId: string): Promise<Question[]> {
     try {
-      const question = await this.pickQuestionForMatch(payload);
+      // Fetch the match with all needed fields in a single query
+      const { data: match, error: matchError } = await this.supabase
+        .from('matches')
+        .select('id, user1_id, user2_id, status, difficulty, common_topics')
+        .eq('id', matchId)
+        .single();
 
-      if (!question) {
-        this.logger.error(`No suitable question found for match ${payload.matchId}`);
-        return;
+      if (matchError || !match) {
+        this.logger.warn(
+          `Match ${matchId} not found (${matchError?.message || 'no data'}), returning all questions`,
+        );
+        return this.findAll();
       }
 
-      const testCases = await this.getTestCasesForQuestion(question.id);
+      if (match.status && match.status !== 'active') {
+        this.logger.warn(`Match ${matchId} is not active (status=${match.status}), returning all questions`);
+        return this.findAll();
+      }
 
-      await this.eventBusService.publishQuestionAssigned({
-        matchId: payload.matchId,
-        questionId: question.id,
-        questionTitle: question.title,
-        questionDescription: question.description,
-        difficulty: this.normalizeDifficultyForPayload(question.difficulty),
-        topics: question.category,
-        testCases: testCases.map((testCase) => ({
-          id: testCase.id,
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          isHidden: testCase.isHidden,
-          orderIndex: testCase.orderIndex,
-        })),
-      });
+      const difficulty = match.difficulty;
+      const topics = Array.isArray(match.common_topics) 
+        ? match.common_topics.filter(Boolean) 
+        : [];
 
-      this.logger.log(`Published question ${question.id} for match ${payload.matchId}`);
+      const normalizedDifficulty = this.normalizeDifficultyForQuery(difficulty);
+
+      // Strategy 1: Try with difficulty + categories
+      if (topics.length > 0) {
+        const questions = await this.findQuestionsByDifficultyAndCategories(
+          normalizedDifficulty,
+          topics,
+        );
+        if (questions.length > 0) {
+          return questions;
+        }
+      }
+
+      // Strategy 2: Try with difficulty only
+      if (normalizedDifficulty) {
+        const questions = await this.findByDifficulty(normalizedDifficulty);
+        if (questions.length > 0) {
+          return questions;
+        }
+      }
+
+      // Strategy 3: Return all questions
+      return this.findAll();
     } catch (error) {
       this.logger.error(
-        `Failed to publish question for match ${payload.matchId}`,
-        error as Error,
+        `Error fetching questions for match selection (${matchId}):`,
+        error,
       );
+      // On error, return all questions as fallback
+      return this.findAll();
     }
   }
 
   /**
-   * Determine a suitable question for the match using fallback strategies.
+   * Find questions matching both difficulty and categories
+   * @param difficulty The difficulty level
+   * @param categories Array of categories
+   * @returns Array of questions matching both criteria
    */
-  private async pickQuestionForMatch(payload: MatchFoundPayload): Promise<Question | null> {
-    const normalizedDifficulty = this.normalizeDifficultyForQuery(payload.difficulty);
-    const topics = Array.isArray(payload.commonTopics)
-      ? payload.commonTopics.filter(Boolean)
-      : [];
+  private async findQuestionsByDifficultyAndCategories(
+    difficulty: string,
+    categories: string[],
+  ): Promise<Question[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('difficulty', difficulty)
+        .overlaps('category', categories)
+        .order('created_at', { ascending: false });
 
-    const strategies: Array<{ difficulty?: string; categories?: string[] }> = [
-      { difficulty: normalizedDifficulty, categories: topics },
-      { difficulty: normalizedDifficulty },
-      {},
-    ];
-
-    for (const strategy of strategies) {
-      const questions = await this.findRandomQuestions(
-        1,
-        strategy.difficulty,
-        strategy.categories && strategy.categories.length > 0 ? strategy.categories : undefined,
-      );
-
-      if (questions.length > 0) {
-        return questions[0];
+      if (error) {
+        this.logger.error('Error fetching questions by difficulty and categories:', error);
+        return [];
       }
-    }
 
-    return null;
+      return (data || []).map(this.mapToQuestion);
+    } catch (error) {
+      this.logger.error('Exception in findQuestionsByDifficultyAndCategories:', error);
+      return [];
+    }
   }
 
+  /**
+   * Handle match found event by preparing for manual question selection.
+   * Updates the match record with difficulty and topics as a backup.
+   */
+  private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
+    try {
+      // Clear any existing selections for this match
+      const { error: deleteError } = await this.supabase
+        .from('question_selections')
+        .delete()
+        .eq('match_id', payload.matchId);
+
+      if (deleteError) {
+        this.logger.error(
+          `Failed to clear existing selections for match ${payload.matchId}: ${deleteError.message}`,
+        );
+      }
+
+      // Update match record with difficulty and topics (backup in case matching service didn't set them)
+      const { error: updateError } = await this.supabase
+        .from('matches')
+        .update({
+          difficulty: payload.difficulty,
+          common_topics: payload.commonTopics,
+        })
+        .eq('id', payload.matchId);
+
+      if (updateError) {
+        this.logger.warn(
+          `Could not update match ${payload.matchId} with criteria: ${updateError.message}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Error while preparing manual selection for match ${payload.matchId}`, error);
+    }
+  }
   /**
    * Normalize difficulty strings for Supabase queries.
    */
@@ -643,6 +704,130 @@ export class QuestionsService implements OnModuleInit {
     } catch (err) {
       console.error('Create question error:', err);
       throw new Error(`Failed to create question: ${err}`);
+    }
+  }
+
+  /**
+   * Log question attempts for all participants in a match
+   */
+  private async logQuestionAttempts(
+    matchId: string,
+    questionId: string,
+    participants: string[],
+  ): Promise<void> {
+    try {
+      const attempts = participants.map((userId) => ({
+        user_id: userId,
+        question_id: questionId,
+        match_id: matchId,
+        attempted_at: new Date().toISOString(),
+      }));
+
+      const { error } = await this.supabase
+        .from('question_attempts')
+        .insert(attempts);
+
+      if (error) {
+        this.logger.error(
+          `Failed to log question attempts for match ${matchId}:`,
+          error,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error logging question attempts:', error);
+    }
+  }
+
+  /**
+   * Get all question attempts for a specific user
+   */
+  async getQuestionAttemptsByUser(userId: string): Promise<any[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('question_attempts')
+        .select(`
+          id,
+          user_id,
+          question_id,
+          match_id,
+          attempted_at,
+          created_at,
+          questions!question_id (
+            id,
+            title,
+            description,
+            difficulty,
+            category
+          )
+        `)
+        .eq('user_id', userId)
+        .order('attempted_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(`Failed to fetch question attempts for user ${userId}:`, error.message);
+        throw new Error(`Failed to fetch question attempts: ${error.message}`);
+      }
+
+      return (data || []).map((attempt) => {
+        // Handle both array and object returns from Supabase
+        const questionData = attempt.questions 
+          ? (Array.isArray(attempt.questions) ? attempt.questions[0] : attempt.questions)
+          : null;
+
+        return {
+          id: attempt.id,
+          userId: attempt.user_id,
+          questionId: attempt.question_id,
+          matchId: attempt.match_id,
+          attemptedAt: attempt.attempted_at,
+          createdAt: attempt.created_at,
+          question: questionData 
+            ? {
+                id: questionData.id,
+                title: questionData.title,
+                description: questionData.description,
+                difficulty: questionData.difficulty,
+                category: questionData.category,
+              }
+            : null,
+        };
+      });
+    } catch (error) {
+      this.logger.error('Error fetching question attempts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all suggested solutions for a specific question
+   */
+  async getSuggestedSolutionsForQuestion(questionId: string): Promise<any[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('suggested_solutions')
+        .select('*')
+        .eq('question_id', questionId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(`Failed to fetch suggested solutions for question ${questionId}:`, error);
+        throw new Error(`Failed to fetch suggested solutions: ${error.message}`);
+      }
+
+      return (data || []).map((solution) => ({
+        id: solution.id,
+        questionId: solution.question_id,
+        language: solution.language,
+        solutionCode: solution.solution_code,
+        explanation: solution.explanation,
+        timeComplexity: solution.time_complexity,
+        spaceComplexity: solution.space_complexity,
+        createdAt: solution.created_at,
+        updatedAt: solution.updated_at,
+      }));
+    } catch (error) {
+      this.logger.error('Error fetching suggested solutions:', error);
+      throw error;
     }
   }
 

@@ -82,7 +82,7 @@ describe('QuestionsService - Unit Tests', () => {
   });
 
   describe('handleMatchFound', () => {
-    it('publishes question assignment when a suitable question is found', async () => {
+    it('clears previous selections and waits for manual question submission', async () => {
       const matchHandler = eventBusServiceMock.registerMatchFoundHandler.mock.calls[0][0] as (
         payload: MatchFoundPayload,
       ) => Promise<void>;
@@ -96,54 +96,15 @@ describe('QuestionsService - Unit Tests', () => {
         commonTopics: ['Array'],
       };
 
-      const chosenQuestion = {
-        id: 'q1',
-        title: 'Two Sum',
-        description: 'Find two numbers',
-        difficulty: 'Easy',
-        category: ['Array'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      const findRandomQuestionsSpy = jest
-        .spyOn(service, 'findRandomQuestions')
-        .mockResolvedValueOnce([chosenQuestion])
-        .mockResolvedValue([]);
-
-      jest.spyOn(service, 'getTestCasesForQuestion').mockResolvedValue([
-        {
-          id: 'tc1',
-          questionId: 'q1',
-          input: { nums: [2, 7, 11, 15] },
-          expectedOutput: { indexes: [0, 1] },
-          isHidden: false,
-          orderIndex: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ]);
+      const deleteSpy = jest.spyOn(mockSupabaseClient, 'delete');
+      const eqSpy = jest.spyOn(mockSupabaseClient, 'eq').mockResolvedValueOnce({ error: null });
 
       await matchHandler(matchPayload);
 
-      expect(findRandomQuestionsSpy).toHaveBeenCalledWith(1, 'Easy', ['Array']);
-      expect(eventBusServiceMock.publishQuestionAssigned).toHaveBeenCalledWith({
-        matchId: 'match-123',
-        questionId: 'q1',
-        questionTitle: 'Two Sum',
-        questionDescription: 'Find two numbers',
-        difficulty: 'easy',
-        topics: ['Array'],
-        testCases: [
-          {
-            id: 'tc1',
-            input: { nums: [2, 7, 11, 15] },
-            expectedOutput: { indexes: [0, 1] },
-            isHidden: false,
-            orderIndex: 1,
-          },
-        ],
-      });
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('question_selections');
+      expect(deleteSpy).toHaveBeenCalled();
+      expect(eqSpy).toHaveBeenCalledWith('match_id', matchPayload.matchId);
+      expect(eventBusServiceMock.publishQuestionAssigned).not.toHaveBeenCalled();
     });
   });
 

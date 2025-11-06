@@ -15,6 +15,20 @@ export const GET_QUESTIONS = gql`
   }
 `;
 
+export const GET_QUESTIONS_FOR_MATCH = gql`
+  query GetQuestionsForMatch($matchId: ID!) {
+    questionsForMatchSelection(matchId: $matchId) {
+      id
+      title
+      difficulty
+      category
+      description
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 export const GET_QUESTION = gql`
   query GetQuestion($id: String!) {
     question(id: $id) {
@@ -225,6 +239,42 @@ export const END_SESSION = gql`
       id
       status
       end_at
+    }
+  }
+`;
+
+export const GET_QUESTION_ATTEMPTS = gql`
+  query GetQuestionAttempts($userId: ID!) {
+    questionAttemptsByUser(userId: $userId) {
+      id
+      userId
+      questionId
+      matchId
+      attemptedAt
+      createdAt
+      question {
+        id
+        title
+        description
+        difficulty
+        category
+      }
+    }
+  }
+`;
+
+export const GET_SUGGESTED_SOLUTIONS = gql`
+  query GetSuggestedSolutions($questionId: ID!) {
+    suggestedSolutionsForQuestion(questionId: $questionId) {
+      id
+      questionId
+      language
+      solutionCode
+      explanation
+      timeComplexity
+      spaceComplexity
+      createdAt
+      updatedAt
     }
   }
 `;

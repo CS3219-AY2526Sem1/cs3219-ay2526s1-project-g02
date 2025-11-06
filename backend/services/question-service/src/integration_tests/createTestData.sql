@@ -1,11 +1,136 @@
--- SETUP SCRIPT: Create Test Data for Question Service
--- Run this in your Supabase SQL Editor after creating the tables
+-- =====================================================
+-- COMPLETE DATABASE SETUP FOR QUESTION SERVICE
+-- Run all sections in Supabase SQL Editor
+-- =====================================================
 
 -- ============================================
--- STEP 1: Insert Sample Questions
+-- SECTION 1: CREATE TABLES
 -- ============================================
 
--- Store the question IDs for later use in test cases
+-- Questions table
+CREATE TABLE IF NOT EXISTS questions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  category TEXT[] NOT NULL,
+  examples TEXT,
+  constraints TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Test cases table
+CREATE TABLE IF NOT EXISTS test_cases (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  input JSONB NOT NULL,
+  expected_output JSONB NOT NULL,
+  is_hidden BOOLEAN DEFAULT false,
+  order_index INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Suggested solutions table
+CREATE TABLE IF NOT EXISTS suggested_solutions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  solution_code TEXT NOT NULL,
+  explanation TEXT NOT NULL,
+  language VARCHAR(50) NOT NULL DEFAULT 'javascript',
+  time_complexity VARCHAR(100),
+  space_complexity VARCHAR(100),
+  approach_name VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Question selections table
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE TABLE IF NOT EXISTS question_selections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  is_winner BOOLEAN,
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  finalized_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Question attempts table
+CREATE TABLE IF NOT EXISTS question_attempts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  match_id UUID,
+  attempted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- SECTION 2: CREATE INDEXES
+-- ============================================
+
+CREATE INDEX IF NOT EXISTS idx_questions_difficulty ON questions(difficulty);
+CREATE INDEX IF NOT EXISTS idx_questions_category ON questions USING GIN(category);
+CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_test_cases_question_id ON test_cases(question_id);
+CREATE INDEX IF NOT EXISTS idx_test_cases_order ON test_cases(question_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_suggested_solutions_question_id ON suggested_solutions(question_id);
+CREATE INDEX IF NOT EXISTS idx_suggested_solutions_language ON suggested_solutions(language);
+CREATE UNIQUE INDEX IF NOT EXISTS question_selections_match_user_idx ON question_selections(match_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_question_attempts_user_id ON question_attempts(user_id);
+CREATE INDEX IF NOT EXISTS idx_question_attempts_question_id ON question_attempts(question_id);
+
+-- ============================================
+-- SECTION 3: ENABLE RLS & CREATE POLICIES
+-- ============================================
+
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suggested_solutions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE question_attempts ENABLE ROW LEVEL SECURITY;
+
+-- Questions: public read, service role manage
+CREATE POLICY "Public read questions" ON questions FOR SELECT USING (true);
+CREATE POLICY "Service manage questions" ON questions FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Test cases: public read, service role manage
+CREATE POLICY "Public read test_cases" ON test_cases FOR SELECT USING (true);
+CREATE POLICY "Service manage test_cases" ON test_cases FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Suggested solutions: public read, service role manage
+CREATE POLICY "Public read solutions" ON suggested_solutions FOR SELECT USING (true);
+CREATE POLICY "Service manage solutions" ON suggested_solutions FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Question attempts: users see own, service role full access
+CREATE POLICY "Users view own attempts" ON question_attempts FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Service manage attempts" ON question_attempts FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ============================================
+-- SECTION 4: CREATE TRIGGERS
+-- ============================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_questions_updated_at BEFORE UPDATE ON questions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_test_cases_updated_at BEFORE UPDATE ON test_cases
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_suggested_solutions_updated_at BEFORE UPDATE ON suggested_solutions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- SECTION 5: INSERT SAMPLE QUESTIONS
+-- ============================================
+
 DO $$
 DECLARE
   two_sum_id UUID;
@@ -194,27 +319,175 @@ INSERT INTO test_cases (question_id, input, expected_output, order_index) VALUES
 (longest_substring_id, '{"s": "bbbbb"}', '{"result": 1}', 2),
 (longest_substring_id, '{"s": "pwwkew"}', '{"result": 3}', 3);
 
-RAISE NOTICE 'Successfully created 10 questions with test cases!';
+-- ============================================
+-- SECTION 6: INSERT SUGGESTED SOLUTIONS
+-- ============================================
+
+-- Binary Search
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function binarySearch(nums, target) {
+  let left = 0, right = nums.length - 1;
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (nums[mid] === target) return mid;
+    else if (nums[mid] < target) left = mid + 1;
+    else right = mid - 1;
+  }
+  return -1;
+}', 'Binary search divides the search space in half repeatedly. Compare middle element with target and eliminate half the array each iteration.', 'javascript', 'O(log n)', 'O(1)', 'Iterative Binary Search'
+FROM questions WHERE title = 'Binary Search' LIMIT 1;
+
+-- Climbing Stairs
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function climbStairs(n) {
+  if (n <= 2) return n;
+  let prev2 = 1, prev1 = 2;
+  for (let i = 3; i <= n; i++) {
+    const current = prev1 + prev2;
+    prev2 = prev1;
+    prev1 = current;
+  }
+  return prev1;
+}', 'Dynamic programming like Fibonacci. Ways to reach step n = ways to reach (n-1) + ways to reach (n-2). Space optimized by tracking only last two values.', 'javascript', 'O(n)', 'O(1)', 'DP Space Optimized'
+FROM questions WHERE title = 'Climbing Stairs' LIMIT 1;
+
+-- Valid Parentheses
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function isValid(s) {
+  const stack = [];
+  const pairs = {"(": ")", "[": "]", "{": "}"};
+  for (let char of s) {
+    if (pairs[char]) stack.push(char);
+    else if (pairs[stack.pop()] !== char) return false;
+  }
+  return stack.length === 0;
+}', 'Use stack for opening brackets. Push openers, pop and match closers. Stack must be empty at end for valid string.', 'javascript', 'O(n)', 'O(n)', 'Stack Matching'
+FROM questions WHERE title = 'Valid Parentheses' LIMIT 1;
+
+-- Longest Substring
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function lengthOfLongestSubstring(s) {
+  const seen = new Map();
+  let maxLen = 0, start = 0;
+  for (let end = 0; end < s.length; end++) {
+    if (seen.has(s[end]) && seen.get(s[end]) >= start) {
+      start = seen.get(s[end]) + 1;
+    }
+    seen.set(s[end], end);
+    maxLen = Math.max(maxLen, end - start + 1);
+  }
+  return maxLen;
+}', 'Sliding window with HashMap. Track last index of each character. When duplicate found in window, slide start pointer past previous occurrence.', 'javascript', 'O(n)', 'O(min(m,n))', 'Sliding Window'
+FROM questions WHERE title = 'Longest Substring Without Repeating Characters' LIMIT 1;
+
+-- Reverse Linked List
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function reverseList(head) {
+  let prev = null, current = head;
+  while (current) {
+    const next = current.next;
+    current.next = prev;
+    prev = current;
+    current = next;
+  }
+  return prev;
+}', 'Iteratively reverse pointers. Maintain three pointers: prev, current, next. For each node, reverse pointer to prev, then advance all pointers.', 'javascript', 'O(n)', 'O(1)', 'Iterative Reversal'
+FROM questions WHERE title = 'Reverse Linked List' LIMIT 1;
+
+-- FizzBuzz
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function fizzBuzz(n) {
+  const result = [];
+  for (let i = 1; i <= n; i++) {
+    if (i % 15 === 0) result.push("FizzBuzz");
+    else if (i % 3 === 0) result.push("Fizz");
+    else if (i % 5 === 0) result.push("Buzz");
+    else result.push(String(i));
+  }
+  return result;
+}', 'Check divisibility by 15 first (both 3 and 5), then 3, then 5. Order matters!', 'javascript', 'O(n)', 'O(n)', 'Modulo Check'
+FROM questions WHERE title = 'FizzBuzz' LIMIT 1;
+
+-- Two Sum
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function twoSum(nums, target) {
+  const map = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (map.has(complement)) return [map.get(complement), i];
+    map.set(nums[i], i);
+  }
+  return [];
+}', 'HashMap stores seen numbers and indices. For each number, check if its complement (target - number) exists in map. O(n) instead of O(n²) nested loops.', 'javascript', 'O(n)', 'O(n)', 'HashMap Lookup'
+FROM questions WHERE title = 'Two Sum' LIMIT 1;
+
+-- Valid Palindrome
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function isPalindrome(s) {
+  const cleaned = s.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  let left = 0, right = cleaned.length - 1;
+  while (left < right) {
+    if (cleaned[left] !== cleaned[right]) return false;
+    left++;
+    right--;
+  }
+  return true;
+}', 'Clean string (remove non-alphanumeric, lowercase). Use two pointers from both ends moving inward, comparing characters.', 'javascript', 'O(n)', 'O(n)', 'Two Pointer'
+FROM questions WHERE title = 'Valid Palindrome' LIMIT 1;
+
+-- Maximum Subarray
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function maxSubArray(nums) {
+  let maxSum = nums[0], currentSum = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    currentSum = Math.max(nums[i], currentSum + nums[i]);
+    maxSum = Math.max(maxSum, currentSum);
+  }
+  return maxSum;
+}', 'Kadane''s Algorithm: At each position, either extend current subarray or start fresh. Track maximum sum seen. Handles negatives elegantly in single pass.', 'javascript', 'O(n)', 'O(1)', 'Kadane''s Algorithm'
+FROM questions WHERE title = 'Maximum Subarray' LIMIT 1;
+
+-- Merge Two Sorted Lists
+INSERT INTO suggested_solutions (question_id, solution_code, explanation, language, time_complexity, space_complexity, approach_name)
+SELECT id, 'function mergeTwoLists(l1, l2) {
+  const dummy = {val: 0, next: null};
+  let current = dummy;
+  while (l1 && l2) {
+    if (l1.val <= l2.val) {
+      current.next = l1;
+      l1 = l1.next;
+    } else {
+      current.next = l2;
+      l2 = l2.next;
+    }
+    current = current.next;
+  }
+  current.next = l1 || l2;
+  return dummy.next;
+}', 'Dummy node simplifies edge cases. Compare heads, attach smaller one, advance that pointer. When one exhausted, attach remainder. Already sorted.', 'javascript', 'O(n+m)', 'O(1)', 'Two-Pointer Merge'
+FROM questions WHERE title = 'Merge Two Sorted Lists' LIMIT 1;
+
+RAISE NOTICE 'Successfully created tables, 10 questions, test cases, and solutions!';
 
 END $$;
 
 -- ============================================
--- STEP 3: Verify the data
+-- SECTION 7: VERIFY SETUP
 -- ============================================
 
--- Check questions count
-SELECT COUNT(*) as total_questions FROM questions;
+SELECT 
+  (SELECT COUNT(*) FROM questions) as total_questions,
+  (SELECT COUNT(*) FROM test_cases) as total_test_cases,
+  (SELECT COUNT(*) FROM suggested_solutions) as total_solutions;
 
--- Check test cases count
-SELECT COUNT(*) as total_test_cases FROM test_cases;
-
--- View questions with test case counts
+-- View complete setup
 SELECT 
   q.title,
   q.difficulty,
-  q.category,
-  COUNT(tc.id) as test_case_count
+  COUNT(DISTINCT tc.id) as test_cases,
+  COUNT(DISTINCT ss.id) as solutions
 FROM questions q
 LEFT JOIN test_cases tc ON q.id = tc.question_id
-GROUP BY q.id, q.title, q.difficulty, q.category
+LEFT JOIN suggested_solutions ss ON q.id = ss.question_id
+GROUP BY q.id, q.title, q.difficulty
 ORDER BY q.difficulty, q.title;
