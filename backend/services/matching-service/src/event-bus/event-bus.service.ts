@@ -12,6 +12,7 @@ import {
 export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(EventBusService.name);
     private pubsubService: PubSubService;
+    private sessionEventHandler?: (payload: SessionEventPayload) => Promise<void>;
 
     constructor(private readonly configService: ConfigService) {
         const projectId = this.configService.get<string>('GCP_PROJECT_ID');
@@ -82,8 +83,19 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
         this.logger.log(`Received session event: ${payload.eventType} for match ${payload.matchId}`);
 
-        // This method can be called by the matching service to update match status
-        // For now, just logging - the actual implementation should be in matching.service.ts
+        if (this.sessionEventHandler) {
+            try {
+                await this.sessionEventHandler(payload);
+            } catch (error) {
+                this.logger.error(
+                    `Error while handling session event ${payload.eventType} for match ${payload.matchId}:`,
+                    error,
+                );
+            }
+            return;
+        }
+
+        this.logger.warn('Session event received but no handler registered');
     }
 
     /**
@@ -91,5 +103,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      */
     public getPubSubService(): PubSubService {
         return this.pubsubService;
+    }
+
+    /**
+     * Register a handler for session lifecycle events
+     */
+    public registerSessionEventHandler(handler: (payload: SessionEventPayload) => Promise<void>): void {
+        this.sessionEventHandler = handler;
+        this.logger.log('Session event handler registered');
     }
 }
