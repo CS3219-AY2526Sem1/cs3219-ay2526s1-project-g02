@@ -11,8 +11,13 @@ import {
   GET_SESSION_WITH_DETAILS,
   GET_USERS,
   END_SESSION,
+  GET_TESTCASES_FOR_QUESTION,
 } from "@/lib/queries";
-import { collaborationClient, userClient } from "@/lib/apollo-client";
+import {
+  collaborationClient,
+  questionClient,
+  userClient,
+} from "@/lib/apollo-client";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { TerminateSessionModal } from "@/components/TerminateSessionModal";
@@ -27,6 +32,7 @@ type Question = {
   description: string;
   difficulty: string;
   category: string[];
+  examples?: string;
 };
 
 type User = {
@@ -87,6 +93,19 @@ export default function EditorPage() {
     skip: !userId || authLoading,
   });
 
+  const questionId = data?.sessionWithDetails?.question?.id;
+
+  //Fetch test cases
+  const {
+    data: testCaseData,
+    loading: testCaseLoading,
+    error: testCaseError,
+  } = useQuery(GET_TESTCASES_FOR_QUESTION, {
+    client: questionClient,
+    variables: { questionId },
+    skip: sessionLoading || !questionId, // Only run query when session is loaded and questionId is available
+  });
+
   // Fetch users for the match
   const session = data?.sessionWithDetails;
   const userIds = session?.match
@@ -102,6 +121,52 @@ export default function EditorPage() {
   const matchUsers = usersData?.users || [];
   const currentUser = matchUsers.find((user: User) => user.id === userId);
   const currentUserName = currentUser?.name || "User";
+
+  //Extracting out explanations from the Examples
+  const [explanations, setExplanations] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (data?.sessionWithDetails?.question?.examples) {
+      const regex = /Explanation:\s*([^\n]*)/g;
+      const matches = [
+        ...data.sessionWithDetails.question.examples.matchAll(regex),
+      ];
+      const extractedExplanations = matches.map((match) => match[1]);
+      setExplanations(extractedExplanations);
+    }
+  }, [data?.sessionWithDetails?.question?.examples]);
+
+  // Helper to render arrays/objects simply: show only the primitive string values (ignore keys)
+  const renderValue = (val: any): JSX.Element => {
+    if (val === null || val === undefined) {
+      return <div className="text-sm text-gray-600">null</div>;
+    }
+
+    // Arrays: show as [a, b, c] with each item displayed as a simple string
+    if (Array.isArray(val)) {
+      const items = val.map((item) => {
+        if (item === null || item === undefined) return "null";
+        if (typeof item === "object") return JSON.stringify(item);
+        return String(item);
+      });
+
+      return <div className="text-sm">[{items.join(", ")}]</div>;
+    }
+
+    // Objects: ignore keys and display values only, joined by commas
+    if (typeof val === "object") {
+      const values = Object.values(val).map((v) => {
+        if (v === null || v === undefined) return "null";
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      });
+
+      return <div className="text-sm">{values.join(", ")}</div>;
+    }
+
+    // Primitives
+    return <div className="text-sm">{String(val)}</div>;
+  };
 
   // Handle query errors
   useEffect(() => {
@@ -343,84 +408,140 @@ export default function EditorPage() {
     <PageLayout header={<NavBar></NavBar>}>
       <div className="flex h-[calc(100vh-64px)] w-screen ">
         {/* Left Sidebar */}
-        <div className="w-1/2 h-full bg-white border-r border-gray-200 flex flex-col px-6 pb-8">
-          <Sidebar
-            title=""
-            bottomContent={
-              <>
-                <button
-                  onClick={() => router.push("/")}
-                  className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => setShowTerminateModal(true)}
-                  className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                >
-                  Terminate Session
-                </button>
-              </>
-            }
-          >
+        <div className="  w-1/2 h-full bg-white border-r border-gray-200 flex flex-col px-6 pb-8">
+          <Sidebar title="">
             <div className="flex flex-col justify-between h-full pb-4">
               {/* Question Info */}
-              {sessionData.question && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold mb-2">
-                    1. {sessionData.question.title}
-                  </h2>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {sessionData.question.description}
-                  </p>
-                  <QuestionExplanation questionId={sessionData.question.id} />
-                </div>
-              )}
 
-              {/* Users */}
-              {!usersLoading && matchUsers.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  {matchUsers.map((user: User) => {
-                    const isOnline = onlineUsers.has(user.id);
+              <div className="h-[470px] overflow-y-auto border-1 rounded p-3 ">
+                {sessionData.question && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold mb-2">
+                      1. {sessionData.question.title}
+                    </h2>
+                    <p className="text-sm text-gray-600 leading-relaxed rounded-sm">
+                      {sessionData.question.description}
+                    </p>
+                    <QuestionExplanation questionId={sessionData.question.id} />
+                  </div>
+                )}
+                {/*Show Test Cases*/}
+                <div>
+                  {testCaseData?.testCasesForQuestion?.map((tc: any) => {
+                    const explanationText =
+                      explanations && tc?.orderIndex
+                        ? explanations[tc.orderIndex - 1]
+                        : undefined;
+
                     return (
-                      <div key={user.id} className="flex items-center gap-3">
-                        <div className="relative">
-                          <UserAvatar username={user.name} size="md" />
-                          {/* Presence indicator */}
-                          <div
-                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
-                              isOnline ? "bg-green-500" : "bg-red-500"
-                            }`}
-                            title={isOnline ? "Online" : "Offline"}
-                          />
+                      <div
+                        key={tc.id}
+                        className="mb-4 p-3 bg-white rounded border"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-gray-700">
+                            Test Case #{tc.orderIndex}
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900 flex items-center gap-2">
-                            @{user.name}
-                            <span
-                              className={`text-xs ${
-                                isOnline ? "text-green-600" : "text-red-600"
-                              }`}
-                            >
-                              {isOnline ? "• Online" : "• Offline"}
-                            </span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Joined{" "}
-                            {new Date(user.createdAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "long",
-                                year: "numeric",
-                              }
-                            )}
-                          </p>
+
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-600 mb-1">
+                              Input
+                            </div>
+                            <div className="overflow-auto rounded bg-gray-50 border px-2 py-2 font-mono text-sm leading-snug">
+                              {renderValue(tc.input)}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-600 mb-1">
+                              Expected Output
+                            </div>
+                            <div className="overflow-auto rounded bg-gray-50 border px-2 py-2 font-mono text-sm leading-snug">
+                              {renderValue(tc.expectedOutput)}
+                            </div>
+                          </div>
+                          {/* Show explanation for the corresponding test if present */}
                         </div>
+                        {explanationText && (
+                          <div className="mt-2 text-xs font-semibold text-gray-600 mb-1">
+                            Explanation
+                            <div className="overflow-auto rounded bg-gray-50 border px-2 py-2 font-mono text-sm leading-snug">
+                              {explanationText}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-              )}
+              </div>
+              <div className="mt-4">
+                {/* Users */}
+                {!usersLoading && matchUsers.length > 0 && (
+                  <>
+                    <div className="flex flex-col gap-4">
+                      {matchUsers.map((user: User) => {
+                        const isOnline = onlineUsers.has(user.id);
+                        return (
+                          <div
+                            key={user.id}
+                            className="flex items-center gap-3"
+                          >
+                            <div className="relative">
+                              <UserAvatar username={user.name} size="md" />
+                              {/* Presence indicator */}
+                              <div
+                                className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
+                                  isOnline ? "bg-green-500" : "bg-red-500"
+                                }`}
+                                title={isOnline ? "Online" : "Offline"}
+                              />
+                            </div>
+                            <div className="flex-none">
+                              <p className="font-semibold text-gray-900 flex items-center gap-2">
+                                @{user.name}
+                                <span
+                                  className={`text-xs ${
+                                    isOnline ? "text-green-600" : "text-red-600"
+                                  }`}
+                                >
+                                  {isOnline ? "• Online" : "• Offline"}
+                                </span>
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Joined{" "}
+                                {new Date(user.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "long",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex mt-6">
+                      <button
+                        onClick={() => router.push("/")}
+                        className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => setShowTerminateModal(true)}
+                        className="pb-4 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      >
+                        Terminate Session
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </Sidebar>
         </div>

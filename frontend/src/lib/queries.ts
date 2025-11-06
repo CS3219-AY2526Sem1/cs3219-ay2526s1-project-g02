@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 
 // Question queries
 export const GET_QUESTIONS = gql`
@@ -95,6 +95,21 @@ export const GET_QUESTIONS_BY_DIFFICULTY = gql`
       difficulty
       category
       description
+    }
+  }
+`;
+
+export const GET_TESTCASES_FOR_QUESTION = gql`
+  query GetTestCasesForQuestion($questionId: ID!) {
+    testCasesForQuestion(questionId: $questionId) {
+      id
+      questionId
+      input
+      expectedOutput
+      isHidden
+      orderIndex
+      createdAt
+      updatedAt
     }
   }
 `;
