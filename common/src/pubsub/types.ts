@@ -28,6 +28,15 @@ export interface QuestionAssignedPayload {
     questionDescription: string;
     difficulty: 'easy' | 'medium' | 'hard';
     topics: string[];
+    testCases: QuestionTestCasePayload[];
+}
+
+export interface QuestionTestCasePayload {
+    id: string;
+    input: any;
+    expectedOutput: any;
+    isHidden: boolean;
+    orderIndex: number;
 }
 
 /**
@@ -37,6 +46,7 @@ export interface QuestionAssignedPayload {
  */
 export interface SessionEventPayload {
     matchId: string;
+    sessionId: string;
     eventType: 'session_started' | 'session_ended' | 'session_expired';
     timestamp: string;
 }

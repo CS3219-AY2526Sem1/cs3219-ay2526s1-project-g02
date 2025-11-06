@@ -78,12 +78,12 @@ flowchart TB
     subgraph Question["Question Service :4002"]
         matchConsumer["Pub/Sub Subscriber<br/>matching-queue-sub"]
         allocator["Question Allocator<br/>Difficulty & Topic Based"]
-        questionProducer["Pub/Sub Publisher<br/>question-queue"]
+        questionPublisher["Pub/Sub Publisher<br/>question-queue"]
         graphqlResolver["GraphQL Resolver<br/>Question Queries"]
 
         matchConsumer --> allocator
         allocator --> supabaseDb
-        allocator --> questionProducer
+        allocator --> questionPublisher
         graphqlResolver --> supabaseDb
     end
 
@@ -92,20 +92,20 @@ flowchart TB
         sessionManager["Session Manager<br/>Yjs-based Collaboration"]
         socketGateway["Socket.IO Gateway<br/>Real-time Sync"]
         yjsBridge["Yjs Document Sync<br/>CRDT"]
-        sessionProducer["Pub/Sub Publisher<br/>session-queue"]
+        sessionPublisher["Pub/Sub Publisher<br/>session-queue"]
 
         questionConsumer --> sessionManager
         sessionManager --> supabaseDb
         sessionManager --> socketGateway
         socketGateway <--> yjsBridge
-        sessionManager --> sessionProducer
+        sessionManager --> sessionPublisher
     end
 
     matchProducer -->|publishes| pubsub
     pubsub -->|matching-queue-sub| matchConsumer
-    questionProducer -->|publishes| pubsub
+    questionPublisher -->|publishes| pubsub
     pubsub -->|question-queue-sub| questionConsumer
-    sessionProducer -->|publishes| pubsub
+    sessionPublisher -->|publishes| pubsub
     pubsub -->|session-queue-sub| sessionConsumer
 
     style Match fill:#e1f5ff
@@ -116,10 +116,8 @@ flowchart TB
 
 **Message Flow:**
 1. **Match Found** → Matching Service publishes to `matching-queue`
-2. **Question Assignment** → Question Service receives match, assigns question, publishes to `question-queue`
-3. **Session Start** → Collaboration Service receives question, provisions session
-4. **Session End** → Collaboration Service publishes to `session-queue`
-5. **Match Complete** → Matching Service receives session end, updates match status
+2. **Question Assignment** → Question Service consumes match, assigns question, publishes to `question-queue`
+3. **Session Provisioned** → Collaboration Service consumes `question-queue` events, creates collaboration session, and publishes lifecycle updates to `session-queue`
 
 For detailed Pub/Sub integration, see [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md).
 
