@@ -368,16 +368,16 @@ export class MatchingService implements OnModuleInit {
                 return;
             }
 
-            if (matchRecord.status !== 'in_session') {
-                const { error: updateError } = await this.supabase
-                    .from('matches')
-                    .update({ status: 'in_session' })
-                    .eq('id', matchId);
+        if (matchRecord.status !== 'active') {
+            const { error: updateError } = await this.supabase
+                .from('matches')
+                .update({ status: 'active' })
+                .eq('id', matchId);
 
-                if (updateError) {
-                    this.logger.error(`Failed to update match ${matchId} status to in_session: ${updateError.message}`);
-                }
+            if (updateError) {
+                this.logger.error(`Failed to update match ${matchId} status to active: ${updateError.message}`);
             }
+        }
 
             this.matchingGateway.notifySessionStarted(matchId, sessionId, participantIds);
         } catch (error) {
