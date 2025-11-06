@@ -1,4 +1,4 @@
-import { RedisService } from "src/redis/redis.service";
+ import { RedisService } from "src/redis/redis.service";
 import { mockRedisService, mockMatchingGateway, mockCheckService, mockEventBusService, mockDatabaseService } from "./matching.mocks";
 import { MatchingService } from "./matching.service";
 import { Test, TestingModule } from '@nestjs/testing';
@@ -787,12 +787,13 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_ended',
             timestamp: new Date().toISOString(),
         }
 
         // Act: Trigger event handler
-        await service.handleMatchEnded(mockSessionEvent);
+        await service.handleSessionEvent(mockSessionEvent);
 
         // Assert: Verify DB update called correctly
         expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
@@ -812,12 +813,13 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_expired',
             timestamp: new Date().toISOString(),
         }
 
         // Act: Trigger event handler
-        await service.handleMatchEnded(mockSessionEvent);
+        await service.handleSessionEvent(mockSessionEvent);
 
         // Assert: Verify DB update called correctly
         expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
@@ -837,12 +839,13 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_started',
             timestamp: new Date().toISOString(),
         }
 
-        // Act: Trigger event handler
-        await service.handleMatchEnded(mockSessionEvent);
+        // Act: Trigger event handler (session_started doesn't call handleMatchEnded)
+        await service.handleSessionEvent(mockSessionEvent);
 
         // Assert: Verify DB update not called
         expect(databaseMock.getClient().update).not.toHaveBeenCalled();
@@ -855,6 +858,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
 
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_ended',
             timestamp: new Date().toISOString(),
         }
@@ -863,7 +867,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         databaseMock.getClient().eq.mockResolvedValueOnce({ error: { message: 'DB Update Failed' } });
 
         // Act & Assert: Trigger event handler and expect error
-        await expect(service.handleMatchEnded(mockSessionEvent)).resolves.not.toThrow();
+        await expect(service.handleSessionEvent(mockSessionEvent)).resolves.not.toThrow();
 
         // Verify: DB update attempted
         expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
