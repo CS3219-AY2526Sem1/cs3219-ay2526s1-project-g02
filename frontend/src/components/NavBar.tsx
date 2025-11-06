@@ -66,6 +66,14 @@ export default function NavBar() {
               </>
             ) : (
               <>
+                <Link href="/attempt-history">
+                  <Button
+                    variant="outline"
+                    className="cursor-pointer border-cyan-600 text-cyan-600 hover:bg-cyan-50"
+                  >
+                    Attempt History
+                  </Button>
+                </Link>
                 <div>
                   <Button
                     onClick={() => setIsSettingsOpen(true)}

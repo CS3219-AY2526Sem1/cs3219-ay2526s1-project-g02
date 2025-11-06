@@ -357,6 +357,9 @@ export class QuestionsService implements OnModuleInit {
       })),
     });
 
+    // Log question attempts for both users
+    await this.logQuestionAttempts(matchId, winningQuestion.id, participants);
+
     const finalizedSelections = await this.fetchSelections(matchId);
     return this.buildSelectionResult('COMPLETE', participants, finalizedSelections, winningQuestion);
   }
@@ -388,40 +391,23 @@ export class QuestionsService implements OnModuleInit {
    * Handle match found event by selecting a question and publishing it.
    */
   private async handleMatchFound(payload: MatchFoundPayload): Promise<void> {
-    this.logger.log(`Selecting question for match ${payload.matchId}`);
+    this.logger.log(
+      `Match ${payload.matchId} ready for manual question selection. Waiting for participant submissions.`,
+    );
 
     try {
-      const question = await this.pickQuestionForMatch(payload);
+      const { error } = await this.supabase
+        .from('question_selections')
+        .delete()
+        .eq('match_id', payload.matchId);
 
-      if (!question) {
-        this.logger.error(`No suitable question found for match ${payload.matchId}`);
-        return;
+      if (error) {
+        this.logger.error(
+          `Failed to clear existing selections for match ${payload.matchId}: ${error.message}`,
+        );
       }
-
-      const testCases = await this.getTestCasesForQuestion(question.id);
-
-      await this.eventBusService.publishQuestionAssigned({
-        matchId: payload.matchId,
-        questionId: question.id,
-        questionTitle: question.title,
-        questionDescription: question.description,
-        difficulty: this.normalizeDifficultyForPayload(question.difficulty),
-        topics: question.category,
-        testCases: testCases.map((testCase) => ({
-          id: testCase.id,
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          isHidden: testCase.isHidden,
-          orderIndex: testCase.orderIndex,
-        })),
-      });
-
-      this.logger.log(`Published question ${question.id} for match ${payload.matchId}`);
     } catch (error) {
-      this.logger.error(
-        `Failed to publish question for match ${payload.matchId}`,
-        error as Error,
-      );
+      this.logger.error(`Error while preparing manual selection for match ${payload.matchId}`, error);
     }
   }
 
@@ -643,6 +629,164 @@ export class QuestionsService implements OnModuleInit {
     } catch (err) {
       console.error('Create question error:', err);
       throw new Error(`Failed to create question: ${err}`);
+    }
+  }
+
+  /**
+   * Log question attempts for all participants in a match
+   */
+  private async logQuestionAttempts(
+    matchId: string,
+    questionId: string,
+    participants: string[],
+  ): Promise<void> {
+    try {
+      const attempts = participants.map((userId) => ({
+        user_id: userId,
+        question_id: questionId,
+        match_id: matchId,
+        attempted_at: new Date().toISOString(),
+      }));
+
+      const { error } = await this.supabase
+        .from('question_attempts')
+        .insert(attempts);
+
+      if (error) {
+        this.logger.error(
+          `Failed to log question attempts for match ${matchId}:`,
+          error,
+        );
+        // Don't throw - logging attempts shouldn't block the main flow
+      } else {
+        this.logger.log(
+          `Logged ${participants.length} question attempt(s) for match ${matchId}, question ${questionId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error logging question attempts:', error);
+    }
+  }
+
+  /**
+   * Get all question attempts for a specific user
+   */
+  async getQuestionAttemptsByUser(userId: string): Promise<any[]> {
+    try {
+      this.logger.log(`Attempting to fetch question attempts for user: ${userId}`);
+      
+      const { data, error } = await this.supabase
+        .from('question_attempts')
+        .select(`
+          id,
+          user_id,
+          question_id,
+          match_id,
+          attempted_at,
+          created_at,
+          questions!question_id (
+            id,
+            title,
+            description,
+            difficulty,
+            category
+          )
+        `)
+        .eq('user_id', userId)
+        .order('attempted_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(`Failed to fetch question attempts for user ${userId}:`, error);
+        this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+        throw new Error(`Failed to fetch question attempts: ${error.message}`);
+      }
+
+      this.logger.log(`Fetched ${(data || []).length} question attempts for user ${userId}`);
+      if (data && data.length > 0) {
+        this.logger.log(`Sample attempt structure:`, JSON.stringify(data[0], null, 2));
+      } else {
+        this.logger.warn(`No attempts found. Checking if table has any data at all...`);
+        
+        // Debug query to see if table has any data
+        const { data: allData, error: allError } = await this.supabase
+          .from('question_attempts')
+          .select('id, user_id')
+          .limit(5);
+        
+        if (allError) {
+          this.logger.error(`Debug query failed:`, allError);
+        } else {
+          this.logger.log(`Total sample records in table: ${(allData || []).length}`);
+          if (allData && allData.length > 0) {
+            this.logger.log(`Sample user IDs in table:`, allData.map(d => d.user_id));
+          }
+        }
+      }
+
+      return (data || []).map((attempt) => {
+        // Handle both array and object returns from Supabase
+        const questionData = attempt.questions 
+          ? (Array.isArray(attempt.questions) ? attempt.questions[0] : attempt.questions)
+          : null;
+
+        return {
+          id: attempt.id,
+          userId: attempt.user_id,
+          questionId: attempt.question_id,
+          matchId: attempt.match_id,
+          attemptedAt: attempt.attempted_at,
+          createdAt: attempt.created_at,
+          question: questionData 
+            ? {
+                id: questionData.id,
+                title: questionData.title,
+                description: questionData.description,
+                difficulty: questionData.difficulty,
+                category: questionData.category,
+              }
+            : null,
+        };
+      });
+    } catch (error) {
+      this.logger.error('Error fetching question attempts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all suggested solutions for a specific question
+   */
+  async getSuggestedSolutionsForQuestion(questionId: string): Promise<any[]> {
+    try {
+      this.logger.log(`Fetching suggested solutions for question: ${questionId}`);
+      
+      const { data, error } = await this.supabase
+        .from('suggested_solutions')
+        .select('*')
+        .eq('question_id', questionId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error(`Failed to fetch suggested solutions for question ${questionId}:`, error);
+        throw new Error(`Failed to fetch suggested solutions: ${error.message}`);
+      }
+
+      this.logger.log(`Fetched ${(data || []).length} suggested solution(s) for question ${questionId}`);
+
+      return (data || []).map((solution) => ({
+        id: solution.id,
+        questionId: solution.question_id,
+        language: solution.language,
+        solutionCode: solution.solution_code,
+        explanation: solution.explanation,
+        timeComplexity: solution.time_complexity,
+        spaceComplexity: solution.space_complexity,
+        createdAt: solution.created_at,
+        updatedAt: solution.updated_at,
+      }));
+    } catch (error) {
+      this.logger.error('Error fetching suggested solutions:', error);
+      throw error;
     }
   }
 

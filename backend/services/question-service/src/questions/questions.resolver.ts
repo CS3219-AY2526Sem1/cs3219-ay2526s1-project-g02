@@ -262,4 +262,77 @@ export class QuestionsResolver {
       finalQuestion: result.finalQuestion ?? null,
     };
   }
+
+  @Query(() => [QuestionAttempt], {
+    description: 'Get all question attempts for a specific user',
+  })
+  async questionAttemptsByUser(
+    @Args('userId', { type: () => ID }) userId: string,
+  ): Promise<QuestionAttempt[]> {
+    return this.questionsService.getQuestionAttemptsByUser(userId);
+  }
+
+  @Query(() => [SuggestedSolution], {
+    description: 'Get suggested solutions for a specific question',
+  })
+  async suggestedSolutionsForQuestion(
+    @Args('questionId', { type: () => ID }) questionId: string,
+  ): Promise<SuggestedSolution[]> {
+    return this.questionsService.getSuggestedSolutionsForQuestion(questionId);
+  }
 }
+
+@ObjectType()
+export class QuestionAttempt {
+  @Field(() => ID)
+  id: string;
+
+  @Field(() => ID)
+  userId: string;
+
+  @Field(() => ID)
+  questionId: string;
+
+  @Field(() => ID)
+  matchId: string;
+
+  @Field()
+  attemptedAt: string;
+
+  @Field()
+  createdAt: string;
+
+  @Field(() => Question, { nullable: true, description: 'The question details' })
+  question?: Question;
+}
+
+@ObjectType()
+export class SuggestedSolution {
+  @Field(() => ID)
+  id: string;
+
+  @Field(() => ID)
+  questionId: string;
+
+  @Field()
+  language: string;
+
+  @Field()
+  solutionCode: string;
+
+  @Field({ nullable: true })
+  explanation?: string;
+
+  @Field({ nullable: true })
+  timeComplexity?: string;
+
+  @Field({ nullable: true })
+  spaceComplexity?: string;
+
+  @Field()
+  createdAt: string;
+
+  @Field()
+  updatedAt: string;
+}
+

@@ -21,7 +21,7 @@ import {
   Loading,
   UserAvatar,
 } from "@/components/ui";
-import { PageHeader, PageLayout } from "@/components/layout";
+import { PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { matchingSocket, SessionStartedData } from "@/lib/socket/socket";
@@ -76,6 +76,7 @@ export default function SessionPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const hasNavigatedRef = useRef(false);
 
   const {
@@ -89,7 +90,7 @@ export default function SessionPage() {
       variables: { matchId },
       skip: !matchId,
       client: questionClient,
-      pollInterval: 5000,
+      pollInterval: 700,
       notifyOnNetworkStatusChange: true,
     }
   );
@@ -274,6 +275,7 @@ export default function SessionPage() {
         selectionStatus.status === "ALREADY_ASSIGNED")
     ) {
       stopPolling?.();
+      setIsCreatingSession(true);
     }
   }, [selectionStatus?.status, stopPolling]);
 
@@ -339,6 +341,37 @@ export default function SessionPage() {
     );
   }
 
+  // Show loading screen when creating session
+  if (isCreatingSession) {
+    return (
+      <PageLayout header={<NavBar />}>
+        <div className="w-full mx-auto pt-20 pb-32 px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 border border-white/50 shadow-lg text-center">
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
+                  <svg className="w-10 h-10 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-3">
+                Creating Your Session
+              </h2>
+              <p className="text-lg text-slate-600 mb-4">
+                Setting up the collaborative environment...
+              </p>
+              <p className="text-sm text-slate-500">
+                You'll be redirected to the editor shortly
+              </p>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
   const handleSubmitSelection = async () => {
     if (!selectedQuestion || hasSubmitted) {
       if (!selectedQuestion) {
@@ -382,63 +415,87 @@ export default function SessionPage() {
   };
 
   return (
-    <PageLayout header={<PageHeader title="No Clue" />}>
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">
-        {selectionError && (
-          <div className="rounded bg-red-100 border border-red-300 text-red-700 px-3 py-2 text-sm">
-            Failed to load selection status: {selectionError?.message ?? "Unknown error"}
+    <PageLayout header={<NavBar />}>
+      <div className="w-full mx-auto pt-12 pb-32 px-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 leading-tight">
+              Choose Your
+              <span className="block bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent pb-1">
+                Challenge
+              </span>
+            </h1>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Select a question to solve together. Once both participants choose, one will be randomly selected.
+            </p>
           </div>
-        )}
 
-        {submitError && (
-          <div className="rounded bg-red-100 border border-red-300 text-red-700 px-3 py-2 text-sm">
-            {submitError}
+          {/* Error Messages */}
+          {selectionError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-6 backdrop-blur-sm">
+              Failed to load selection status: {selectionError?.message ?? "Unknown error"}
+            </div>
+          )}
+
+          {submitError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-6 backdrop-blur-sm">
+              {submitError}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <div className="flex justify-center mb-8">
+            <button
+              onClick={handleSubmitSelection}
+              disabled={
+                !selectedQuestion ||
+                submitting ||
+                !matchId ||
+                !activeUserId ||
+                isSelectionComplete ||
+                hasSubmitted
+              }
+              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
+                !selectedQuestion ||
+                submitting ||
+                !matchId ||
+                !activeUserId ||
+                isSelectionComplete ||
+                hasSubmitted
+                  ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:shadow-xl hover:shadow-cyan-500/25"
+              }`}
+            >
+              {isSelectionComplete
+                ? "Question Assigned"
+                : submitting
+                ? "Submitting..."
+                : "Submit Selection"}
+            </button>
           </div>
-        )}
 
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSubmitSelection}
-            disabled={
-              !selectedQuestion ||
-              submitting ||
-              !matchId ||
-              !activeUserId ||
-              isSelectionComplete ||
-              hasSubmitted
-            }
-          >
-            {isSelectionComplete
-              ? "Question Assigned"
-              : submitting
-              ? "Submitting..."
-              : "Submit Selection"}
-          </Button>
-        </div>
-
-        {selectionSummary && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Selection Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Selection Progress Card */}
+          {selectionSummary && (
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Selection Progress</h2>
+              
               <div className="space-y-4">
                 {/* User Selections */}
                 {selectionSummary.selections.length > 0 && (
                   <div className="space-y-3">
                     {selectionSummary.selections.map((selection) => {
                       const question = questionLookup.get(selection.questionId);
-                      const isCurrentUser = selection.userId === activeUserId;
                       const isWinner = selection.isWinner;
                       const displayName = resolveUserLabel(selection.userId);
                       
                       return (
                         <div
                           key={selection.userId}
-                          className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
                             isWinner
-                              ? "bg-green-50 border-green-200"
-                            : "bg-white border-slate-200"
+                              ? "bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300"
+                              : "bg-white/80 border border-slate-200"
                           }`}
                         >
                           <UserAvatar 
@@ -447,20 +504,20 @@ export default function SessionPage() {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm text-slate-900">
+                              <span className="font-semibold text-slate-900">
                                 {displayName}
                               </span>
                               {isWinner && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-500 text-white">
                                   ✓ Final Choice
                                 </span>
                               )}
                             </div>
-                            <div className="text-sm text-slate-600 truncate">
-                              Selected: <span className="font-medium">{question?.title ?? selection.questionId}</span>
+                            <div className="text-sm text-slate-600 truncate mt-1">
+                              Selected: <span className="font-semibold">{question?.title ?? selection.questionId}</span>
                             </div>
                             {question && (
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-2 mt-2">
                                 <DifficultyBadge difficulty={question.difficulty} />
                                 <span className="text-xs text-slate-500">
                                   {question.category.slice(0, 2).join(", ")}
@@ -475,25 +532,25 @@ export default function SessionPage() {
                 )}
 
                 {/* Pending Users */}
-                    {selectionSummary.pendingUserIds.length > 0 && (
-                      <div className="pt-3 border-t border-slate-200">
-                        <div className="text-sm font-medium text-slate-700 mb-2">
-                          Waiting for selections:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {selectionSummary.pendingUserIds.map((userId) => (
-                            <div
-                              key={userId}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200"
-                            >
-                              <UserAvatar username={resolveUserLabel(userId)} size="sm" />
-                              <span className="text-xs font-medium text-slate-700">
-                                {resolveUserLabel(userId)}
-                              </span>
-                              <div className="flex gap-1">
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-75" />
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse delay-150" />
+                {selectionSummary.pendingUserIds.length > 0 && (
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="text-sm font-semibold text-slate-700 mb-3">
+                      Waiting for selections:
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {selectionSummary.pendingUserIds.map((userId) => (
+                        <div
+                          key={userId}
+                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200"
+                        >
+                          <UserAvatar username={resolveUserLabel(userId)} size="sm" />
+                          <span className="text-sm font-medium text-slate-700">
+                            {resolveUserLabel(userId)}
+                          </span>
+                          <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                            <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse delay-75" />
+                            <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse delay-150" />
                           </div>
                         </div>
                       ))}
@@ -501,48 +558,65 @@ export default function SessionPage() {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
 
-        <div className="space-y-4">
-          {questions.map((question) => {
-            const isSelected =
-              selectedQuestion === question.id || finalQuestionId === question.id;
+          {/* Questions Grid */}
+          <div className="space-y-4">
+            {questions.map((question) => {
+              const isSelected =
+                selectedQuestion === question.id || finalQuestionId === question.id;
+              const isFinal = finalQuestionId === question.id;
 
-            return (
-              <Card
-                key={question.id}
-                onClick={() => {
-                  if (isSelectionComplete || hasSubmitted) return;
-                  setSelectedQuestion(question.id);
-                }}
-                selected={isSelected}
-                className={
-                  finalQuestionId === question.id
-                    ? "border-green-500 border-2"
-                    : undefined
-                }
-              >
-                <CardHeader>
-                  <CardTitle>{question.title}</CardTitle>
-                  <CardContent>
-                    <span className="font-normal">
-                      Topics: {question.category.join(", ")}
-                    </span>
-                  </CardContent>
-                  <div className="flex items-center gap-2">
-                    <DifficultyBadge difficulty={question.difficulty} />
-                    {finalQuestionId === question.id && (
-                      <span className="text-green-600 text-xs font-semibold uppercase">
-                        Selected
-                      </span>
+              return (
+                <div
+                  key={question.id}
+                  onClick={() => {
+                    if (isSelectionComplete || hasSubmitted) return;
+                    setSelectedQuestion(question.id);
+                  }}
+                  className={`
+                    bg-white/60 backdrop-blur-sm rounded-2xl p-6 border transition-all duration-300
+                    ${isFinal 
+                      ? "border-emerald-400 border-2 shadow-lg shadow-emerald-500/20" 
+                      : isSelected
+                      ? "border-cyan-400 border-2 shadow-lg shadow-cyan-500/20"
+                      : "border-white/50 hover:border-cyan-200 hover:shadow-lg"
+                    }
+                    ${!isSelectionComplete && !hasSubmitted ? "cursor-pointer" : "cursor-default"}
+                  `}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">
+                        {question.title}
+                      </h3>
+                      <p className="text-slate-600 mb-3">
+                        Topics: {question.category.join(", ")}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <DifficultyBadge difficulty={question.difficulty} />
+                        {isFinal && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r from-emerald-500 to-green-500 text-white">
+                            ✓ Selected Question
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {isSelected && !isFinal && (
+                      <div className="flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </CardHeader>
-              </Card>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </PageLayout>
