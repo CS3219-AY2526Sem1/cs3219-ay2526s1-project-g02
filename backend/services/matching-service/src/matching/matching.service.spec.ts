@@ -787,6 +787,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_ended',
             timestamp: new Date().toISOString(),
         }
@@ -812,6 +813,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_expired',
             timestamp: new Date().toISOString(),
         }
@@ -837,6 +839,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Arrange: Prepare mock event data
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_started',
             timestamp: new Date().toISOString(),
         }
@@ -855,6 +858,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
 
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
+            sessionId: 'session-123',
             eventType: 'session_ended',
             timestamp: new Date().toISOString(),
         }
