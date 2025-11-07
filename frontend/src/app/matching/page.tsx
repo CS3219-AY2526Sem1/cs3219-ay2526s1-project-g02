@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button, Loading } from "@/components/ui";
+import { PROGRAMMING_TOPICS } from "@/constants/constants";
 import {
   CANCEL_MATCH_MUTATION,
   FIND_MATCH_MUTATION,
@@ -22,14 +23,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const LANGUAGES = ["JavaScript", "Python", "Java", "C++", "Go", "Rust"];
-const TOPICS = [
-  "Algorithms",
-  "Data Structures",
-  "Graphs and Trees",
-  "Networking",
-  "Concurrency",
-  "Databases",
-];
+const TOPICS = PROGRAMMING_TOPICS;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
 
 type MatchStatus =
@@ -48,7 +42,6 @@ export default function MatchingPage() {
   // Get userId from auth
   const { session, loading: authLoading } = useAuth();
   const ACTIVE_USER_ID = session?.user?.id || null;
-  const ACCESS_TOKEN = session?.access_token || "";
 
   // State Variables   
   const [status, setStatus] = useState<MatchStatus>("IDLE");
