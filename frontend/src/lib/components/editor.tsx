@@ -12,6 +12,7 @@ interface EditorProps {
   width?: string;
   defaultLanguage: string;
   defaultValue?: string;
+  onSyncComplete?: () => void;
 }
 
 export default function Editor({
@@ -20,24 +21,33 @@ export default function Editor({
   defaultLanguage = "javascript",
   defaultValue = "",
   webSocketService,
+  onSyncComplete,
 }: EditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [binding, setBinding] = useState<MonacoBinding | null>(null);
 
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
+  const handleEditorDidMount: OnMount = async (editor, monaco) => {
     if (!editor) throw new Error("Editor not found");
     if (!webSocketService) throw new Error("WebSocket service not provided");
 
+    // Store ref immediately
     editorRef.current = editor;
 
     // Clean up existing binding before creating new one
     binding?.destroy();
 
+    // Connect and wait for initial sync
     webSocketService.connect();
+    await webSocketService.waitForSync();
+
+    // Now bind after sync completes
     const newBinding = webSocketService.bindToEditor(editor);
     if (!newBinding) throw new Error("Failed to bind to editor");
 
     setBinding(newBinding);
+    
+    // Notify parent that sync is complete
+    onSyncComplete?.();
   };
 
   return (
@@ -45,7 +55,6 @@ export default function Editor({
       height={height}
       width={width}
       defaultLanguage={defaultLanguage}
-      defaultValue={defaultValue}
       theme="vs-dark"
       onMount={handleEditorDidMount}
       options={{
