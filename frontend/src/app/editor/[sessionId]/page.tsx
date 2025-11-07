@@ -69,6 +69,7 @@ export default function EditorPage() {
     new Set()
   );
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [isEditorSynced, setIsEditorSynced] = useState(false);
 
   const userId = authSession?.user?.id;
 
@@ -143,6 +144,9 @@ export default function EditorPage() {
     if (session.status !== "active") {
       return;
     }
+
+    // Reset sync state when initializing
+    setIsEditorSynced(false);
 
     const initWebSocket = async () => {
       // Import WebSocketService on client side because it utilises browser APIs and NextJS is using SSR
@@ -424,14 +428,28 @@ export default function EditorPage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col bg-gray-50">
+        <div className="flex-1 flex flex-col bg-gray-50 relative">
           {webSocketService && (
-            <Editor
-              height={"100%"}
-              defaultLanguage={sessionData.language}
-              defaultValue={sessionData.code}
-              webSocketService={webSocketService}
-            />
+            <>
+              <Editor
+                height={"100%"}
+                defaultLanguage={sessionData.language}
+                defaultValue={sessionData.code}
+                webSocketService={webSocketService}
+                onSyncComplete={() => setIsEditorSynced(true)}
+              />
+              {/* Loading overlay while syncing */}
+              {!isEditorSynced && (
+                <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
+                  <div className="bg-white rounded-lg p-6 flex items-center gap-3 shadow-xl">
+                    <div className="h-6 w-6 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-gray-700 font-medium">
+                      Syncing editor...
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {!webSocketService && isSessionEnded && (
             <div className="flex items-center justify-center flex-1">
