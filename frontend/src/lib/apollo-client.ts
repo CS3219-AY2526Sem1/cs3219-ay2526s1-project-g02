@@ -1,11 +1,12 @@
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
 
-const httpLink = new HttpLink({
+// Matching service client
+const matchingHttpLink = new HttpLink({
   uri: process.env.NEXT_PUBLIC_MATCHING_GRAPHQL_URL || 'http://localhost:4003/graphql',
 });
     
-export const client = new ApolloClient({
-  link: httpLink,
+export const matchingClient = new ApolloClient({
+  link: matchingHttpLink,
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {

@@ -23,3 +23,9 @@ export const PROGRAMMING_TOPICS = [
     'Simulation',
     'Two Pointers',
 ] as const;
+
+export const DIFFICULTIES = [
+    "Easy", 
+    "Medium", 
+    "Hard"
+] as const;
