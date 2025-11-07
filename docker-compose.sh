@@ -15,11 +15,11 @@ NC='\033[0m' # No Color
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Check if .env.docker exists
+# Check if .env file exists
 check_env_file() {
-    if [ ! -f "$SCRIPT_DIR/.env.docker" ]; then
-        echo -e "${RED}Error: .env.docker file not found${NC}"
-        echo "Please create .env.docker with your Supabase credentials"
+    if [ ! -f "$SCRIPT_DIR/.env" ]; then
+        echo -e "${RED}Error: .env file not found${NC}"
+        echo "Please create .env with your Supabase credentials"
         exit 1
     fi
 }
@@ -64,7 +64,7 @@ EOF
 start_services() {
     echo -e "${BLUE}Starting all services...${NC}"
     check_env_file
-    docker-compose --env-file .env.docker up -d
+    docker-compose --env-file .env up -d
     echo -e "${GREEN}✓ All services started!${NC}"
     echo ""
     echo "Services are running at:"
@@ -80,14 +80,14 @@ start_services() {
 # Stop services
 stop_services() {
     echo -e "${BLUE}Stopping all services...${NC}"
-    docker-compose --env-file .env.docker down
+    docker-compose --env-file .env down
     echo -e "${GREEN}✓ All services stopped${NC}"
 }
 
 # Restart services
 restart_services() {
     echo -e "${BLUE}Restarting all services...${NC}"
-    docker-compose --env-file .env.docker restart
+    docker-compose --env-file .env restart
     echo -e "${GREEN}✓ All services restarted${NC}"
 }
 
@@ -95,7 +95,7 @@ restart_services() {
 build_services() {
     echo -e "${BLUE}Building all services...${NC}"
     check_env_file
-    docker-compose --env-file .env.docker build
+    docker-compose --env-file .env build
     echo -e "${GREEN}✓ Build complete${NC}"
 }
 
@@ -103,22 +103,22 @@ build_services() {
 rebuild_services() {
     echo -e "${YELLOW}Rebuilding all services from scratch (no cache)...${NC}"
     check_env_file
-    docker-compose --env-file .env.docker build --no-cache
+    docker-compose --env-file .env build --no-cache
     echo -e "${GREEN}✓ Rebuild complete${NC}"
 }
 
 # View logs
 view_logs() {
     if [ -z "$1" ]; then
-        docker-compose --env-file .env.docker logs -f
+        docker-compose --env-file .env logs -f
     else
-        docker-compose --env-file .env.docker logs -f "$1"
+        docker-compose --env-file .env logs -f "$1"
     fi
 }
 
 # Show running services
 show_status() {
-    docker-compose --env-file .env.docker ps
+    docker-compose --env-file .env ps
 }
 
 # Clean up everything
@@ -128,7 +128,7 @@ clean_services() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Cleaning up...${NC}"
-        docker-compose --env-file .env.docker down -v
+        docker-compose --env-file .env down -v
         echo -e "${GREEN}✓ Cleanup complete${NC}"
     else
         echo "Cancelled"
@@ -144,7 +144,7 @@ open_shell() {
         exit 1
     fi
 
-    docker-compose --env-file .env.docker exec "$1" sh
+    docker-compose --env-file .env exec "$1" sh
 }
 
 # Main command dispatcher
