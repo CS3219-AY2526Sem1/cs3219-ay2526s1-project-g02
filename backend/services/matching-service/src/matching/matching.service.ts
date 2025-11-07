@@ -395,15 +395,27 @@ export class MatchingService implements OnModuleInit {
         this.logger.log(`Handling match ended for match ID ${matchId}`);
 
         try {
-            const { error, data } = await this.supabase
+
+            // 1. Update matches table
+            const { error: matchError, data } = await this.supabase
                 .from('matches')
                 .update({ status: 'ended', ended_at: new Date().toISOString() })
                 .eq('id', matchId)
                 .select();
 
-            if (error) {
-                this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);
+            if (matchError) {
+                this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${matchError.message}`);
                 return;
+            }
+
+            // 2. Update sessions table
+            const { error: sessionError } = await this.supabase
+                .from('sessions')
+                .update({ status: 'ended', end_at: new Date().toISOString() })
+                .eq('match_id', matchId);
+            
+            if (sessionError) {
+                this.logger.error(`Failed to update session status for match ID ${matchId}: ${sessionError.message}`);
             }
 
             if (data.length > 0) {

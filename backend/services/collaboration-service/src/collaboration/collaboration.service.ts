@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import { Injectable, Logger } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { QuestionAssignedPayload } from '@noclue/common';
+import { QuestionAssignedPayload, SessionEventPayload } from '@noclue/common';
+import { EventBusService } from 'src/event-bus/event-bus.service';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -11,6 +12,11 @@ const supabase = createClient(
 @Injectable()
 export class CollaborationService {
   private readonly logger = new Logger(CollaborationService.name);
+
+  constructor(
+    private readonly eventBusService: EventBusService,
+  ) {}
+
   async createSession(matchId: string) {
     const { data, error } = await supabase
       .from('sessions')
@@ -161,6 +167,8 @@ export class CollaborationService {
   }
 
   async endSession(sessionId: string) {
+
+    // 1. Update sessions table
     const { data, error } = await supabase
       .from('sessions')
       .update({ status: 'ended', end_at: new Date().toISOString() })
@@ -169,6 +177,20 @@ export class CollaborationService {
       .single();
 
     if (error) throw new Error(`Failed to end session: ${error.message}`);
+
+    // 2. Publish session_ended event
+    const payload: SessionEventPayload = {
+        matchId: data.match_id,
+        sessionId: data.id,
+        eventType: 'session_ended',
+        timestamp: new Date().toISOString(),
+    };
+
+    try {
+        await this.eventBusService.publishSessionEvent(payload); 
+    } catch (eventError) {
+        this.logger.error(`Failed to publish session_ended event for session ${sessionId}: ${eventError.message}`);    
+    }
     return data;
   }
 }
