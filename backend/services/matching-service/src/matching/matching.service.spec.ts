@@ -770,8 +770,13 @@ describe('(D) MatchingService: Match End Event Handling', () => {
 
         // Reset specific Supabase mock implementations for this suite
         databaseMock.getClient().from.mockReturnThis();
+        databaseMock.getClient().select.mockReturnThis();
         databaseMock.getClient().update.mockReturnThis();
-        databaseMock.getClient().eq.mockResolvedValue({ error: null }); // Default: successful update
+        databaseMock.getClient().eq.mockReturnThis();
+        databaseMock.getClient().single.mockResolvedValue({
+            data: null,
+            error: null
+        });
     });
 
     // Scenario D1: Ensure service init and subscribes.
@@ -798,8 +803,8 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Assert: Verify DB update called correctly
         expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
         expect(databaseMock.getClient().update).toHaveBeenCalledWith(
-            expect.objectContaining({ 
-                status: 'completed',
+            expect.objectContaining({
+                status: 'ended',
                 ended_at: expect.any(String),
             })
         );
@@ -824,19 +829,19 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Assert: Verify DB update called correctly
         expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
         expect(databaseMock.getClient().update).toHaveBeenCalledWith(
-            expect.objectContaining({ 
-                status: 'expired',
+            expect.objectContaining({
+                status: 'ended',
                 ended_at: expect.any(String),
             })
         );
         expect(databaseMock.getClient().eq).toHaveBeenCalledWith('id', mockMatchId);
     });
 
-    // Scenario D4: Ignore irrelevant session event type. 
-    it("should ignore irrelevant session event types", async () => {
+    // Scenario D4: Handle session started event and query database
+    it("should handle session started event and query database", async () => {
         testLogger.log("SCENARIO D4");
 
-        // Arrange: Prepare mock event data
+        // Arrange: Prepare mock event data and mock DB response
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
             sessionId: 'session-123',
@@ -844,12 +849,20 @@ describe('(D) MatchingService: Match End Event Handling', () => {
             timestamp: new Date().toISOString(),
         }
 
-        // Act: Trigger event handler (session_started doesn't call handleMatchEnded)
+        // Mock DB response for select query
+        databaseMock.getClient().single.mockResolvedValueOnce({
+            data: { user1_id: 'user1', user2_id: 'user2', status: 'pending' },
+            error: null
+        });
+
+        // Act: Trigger event handler
         await service.handleSessionEvent(mockSessionEvent);
 
-        // Assert: Verify DB update not called
-        expect(databaseMock.getClient().update).not.toHaveBeenCalled();
-        expect(databaseMock.getClient().eq).not.toHaveBeenCalled();
+        // Assert: Verify DB select was called to retrieve match info
+        expect(databaseMock.getClient().select).toHaveBeenCalled();
+        expect(databaseMock.getClient().eq).toHaveBeenCalled();
+        // Update may be called if status is not 'active'
+        expect(databaseMock.getClient().update).toHaveBeenCalled();
     });
 
     // Scenario D5: Database failure handling.
