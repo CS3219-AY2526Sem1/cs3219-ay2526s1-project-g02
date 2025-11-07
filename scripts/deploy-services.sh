@@ -92,6 +92,10 @@ main() {
     log_step "Step 4: Creating/Updating Kubernetes secrets..."
     create_secrets
 
+    # Step 5: Verify Pub/Sub Configuration
+    log_step "Step 5: Verifying Pub/Sub configuration..."
+    verify_pubsub_config
+
     # Step 6: Apply Services
     log_step "Step 6: Applying Kubernetes Services..."
     apply_services
@@ -159,6 +163,87 @@ create_secrets() {
             log_info "  2. Create $K8S_DIR/secrets.yaml"
             exit 1
         fi
+    fi
+}
+
+# Verify Pub/Sub configuration
+verify_pubsub_config() {
+    log_info "Checking Pub/Sub configuration..."
+    
+    local config_ok=true
+    
+    # Check if pubsub-key secret exists
+    if kubectl get secret pubsub-key -n "$NAMESPACE" &>/dev/null; then
+        log_success "✓ Pub/Sub secret 'pubsub-key' exists"
+    else
+        log_warning "⚠️  Pub/Sub secret 'pubsub-key' not found"
+        log_info "   Run: ./scripts/setup-pubsub-auth.sh"
+        config_ok=false
+    fi
+    
+    # Check if pubsub-config configmap exists
+    if kubectl get configmap pubsub-config -n "$NAMESPACE" &>/dev/null; then
+        log_success "✓ Pub/Sub ConfigMap 'pubsub-config' exists"
+        
+        # Verify GCP_PROJECT_ID is set
+        local project_id=$(kubectl get configmap pubsub-config -n "$NAMESPACE" -o jsonpath='{.data.GCP_PROJECT_ID}' 2>/dev/null || echo "")
+        if [ -n "$project_id" ]; then
+            log_success "✓ GCP_PROJECT_ID configured: $project_id"
+        else
+            log_warning "⚠️  GCP_PROJECT_ID not set in pubsub-config"
+            config_ok=false
+        fi
+    else
+        log_warning "⚠️  Pub/Sub ConfigMap 'pubsub-config' not found"
+        log_info "   Run: ./scripts/setup-pubsub-auth.sh"
+        config_ok=false
+    fi
+    
+    # Check if Pub/Sub topics exist (if gcloud is available)
+    if command -v gcloud &> /dev/null && [ -n "${GCP_PROJECT_ID}" ]; then
+        log_info "Checking Pub/Sub topics..."
+        
+        local topics=("matching-queue" "question-queue" "session-queue")
+        local topics_ok=true
+        
+        for topic in "${topics[@]}"; do
+            if gcloud pubsub topics describe "$topic" --project="${GCP_PROJECT_ID}" &>/dev/null; then
+                log_success "✓ Topic '$topic' exists"
+            else
+                log_warning "⚠️  Topic '$topic' not found"
+                topics_ok=false
+            fi
+        done
+        
+        if [ "$topics_ok" = false ]; then
+            log_info "   Run: npm run setup:pubsub"
+        fi
+    else
+        log_info "Skipping Pub/Sub topics check (gcloud not available or GCP_PROJECT_ID not set)"
+    fi
+    
+    if [ "$config_ok" = false ]; then
+        log_warning "⚠️  Pub/Sub configuration incomplete"
+        log_info "Services may fail to publish/subscribe to Pub/Sub"
+        log_info ""
+        log_info "To fix:"
+        log_info "  1. Run: GCP_PROJECT_ID=your-project ./scripts/setup-pubsub-auth.sh"
+        log_info "  2. Run: npm run setup:pubsub"
+        log_info ""
+        
+        # In CI/CD environment, continue anyway
+        if [ -n "${CI}" ] || [ -n "${GITHUB_ACTIONS}" ]; then
+            log_warning "Running in CI/CD - continuing deployment"
+        else
+            read -p "Continue deployment anyway? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_error "Deployment cancelled by user"
+                exit 1
+            fi
+        fi
+    else
+        log_success "Pub/Sub configuration verified ✓"
     fi
 }
 

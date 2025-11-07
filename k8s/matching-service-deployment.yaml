@@ -27,6 +27,8 @@ spec:
         envFrom:
         - secretRef:
             name: supabase-secrets
+        - configMapRef:
+            name: pubsub-config
         env:
         - name: PORT
           value: "4003"
@@ -46,11 +48,20 @@ spec:
         - name: CORS_ORIGIN
           value: "https://noclue.com"
         - name: GCP_PROJECT_ID
-          value: "noclue-476404"
+          valueFrom:
+            configMapKeyRef:
+              name: pubsub-config
+              key: GCP_PROJECT_ID
+        - name: GCP_KEY_FILENAME
+          value: "/etc/gcp/key.json"
         - name: REDIS_HOST
           value: "10.175.68.99"
         - name: REDIS_PORT
           value: "6379"
+        volumeMounts:
+        - name: gcp-key
+          mountPath: /etc/gcp
+          readOnly: true
         resources:
           requests:
             memory: "128Mi"
@@ -74,3 +85,7 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+      volumes:
+      - name: gcp-key
+        secret:
+          secretName: pubsub-key
