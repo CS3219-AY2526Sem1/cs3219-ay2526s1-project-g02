@@ -17,6 +17,7 @@ import { DeleteAccountInput } from "./dto/deleteAccount.input";
 import { ApolloError } from "apollo-server-errors";
 import { VerifyPasswordInput } from "./dto/verifyPassword.input";
 import { ResetPasswordInput } from "./dto/resetPassword.input";
+import { GqlUser } from "./model/user.model";
 
 @Resolver()
 export class UsersResolver {
@@ -102,5 +103,10 @@ export class UsersResolver {
   @Query(() => String, { name: "ping" })
   ping() {
     return "pong";
+  }
+
+  @Query(() => [GqlUser], { name: "users" })
+  async getUsers(@Args("user_ids", { type: () => [String] }) userIds: string[]): Promise<GqlUser[]> {
+    return this.usersService.getUsersByIds(userIds);
   }
 }

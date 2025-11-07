@@ -1,0 +1,66 @@
+# Stage 1: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Copy workspace configuration
+COPY package*.json ./
+
+# Copy backend workspace configuration
+COPY backend/package*.json ./backend/
+COPY backend/tsconfig.json ./backend/tsconfig.json
+
+# Copy all service package.json files (needed for workspace resolution)
+COPY backend/services/user-service/package*.json ./backend/services/user-service/
+COPY backend/services/matching-service/package*.json ./backend/services/matching-service/
+COPY backend/services/question-service/package*.json ./backend/services/question-service/
+COPY backend/services/collaboration-service/package*.json ./backend/services/collaboration-service/
+COPY backend/services/llm-service/package*.json ./backend/services/llm-service/
+
+# Copy common package.json
+COPY common/package*.json ./common/
+
+# Install ALL dependencies at root (sets up workspace links and installs all deps)
+RUN npm install
+
+# Now copy the actual source files
+COPY common ./common
+COPY backend/services/llm-service ./backend/services/llm-service
+
+# Build common package FIRST (makes it available as local package)
+RUN npm run build:common
+
+# Move to service directory for NestJS build (needs to find nest-cli.json and tsconfig.json)
+WORKDIR /app/backend/services/llm-service
+
+# Build service (dependencies already installed by root npm install, no npm install here!)
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy workspace configuration
+COPY package*.json ./
+COPY --from=builder /app/backend/package*.json ./backend/
+
+# Copy built common package with its node_modules
+COPY --from=builder /app/common ./common
+
+# Copy built llm service
+COPY --from=builder /app/backend/services/llm-service/dist ./backend/services/llm-service/dist
+COPY --from=builder /app/backend/services/llm-service/package*.json ./backend/services/llm-service/
+COPY --from=builder /app/backend/services/llm-service/.env* ./backend/services/llm-service/
+
+# Copy node_modules from builder (includes all dependencies)
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 4005
+
+ENV PORT=4005
+
+WORKDIR /app/backend/services/llm-service
+
+CMD ["node", "dist/main.js"]
+

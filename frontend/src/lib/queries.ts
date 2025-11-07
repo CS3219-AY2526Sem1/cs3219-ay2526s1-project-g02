@@ -15,6 +15,20 @@ export const GET_QUESTIONS = gql`
   }
 `;
 
+export const GET_QUESTIONS_FOR_MATCH = gql`
+  query GetQuestionsForMatch($matchId: ID!) {
+    questionsForMatchSelection(matchId: $matchId) {
+      id
+      title
+      difficulty
+      category
+      description
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 export const GET_QUESTION = gql`
   query GetQuestion($id: String!) {
     question(id: $id) {
@@ -23,6 +37,64 @@ export const GET_QUESTION = gql`
       difficulty
       category
       description
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const SUBMIT_QUESTION_SELECTION = gql`
+  mutation SubmitQuestionSelection($input: SubmitQuestionSelectionInput!) {
+    submitQuestionSelection(input: $input) {
+      status
+      pendingUserIds
+      selections {
+        userId
+        questionId
+        isWinner
+        submittedAt
+        finalizedAt
+      }
+      finalQuestion {
+        id
+        title
+        difficulty
+        category
+        description
+      }
+    }
+  }
+`;
+
+export const QUESTION_SELECTION_STATUS = gql`
+  query QuestionSelectionStatus($matchId: ID!) {
+    questionSelectionStatus(matchId: $matchId) {
+      status
+      pendingUserIds
+      selections {
+        userId
+        questionId
+        isWinner
+        submittedAt
+        finalizedAt
+      }
+      finalQuestion {
+        id
+        title
+        difficulty
+        category
+        description
+      }
+    }
+  }
+`;
+
+export const GET_USERS = gql`
+  query GetUsers($user_ids: [String!]!) {
+    users(user_ids: $user_ids) {
+      id
+      email
+      name
       createdAt
       updatedAt
     }
@@ -103,6 +175,7 @@ export const IS_USERNAME_TAKEN = `
   }
 `;
 
+
 export const MY_USERNAME_QUERY = `
   query MyUsername($id: String!) {
     myUsername(id: $id)
@@ -114,5 +187,108 @@ export const UPDATE_MY_USERNAME = `
     updateMyUsername(id: $id, username: $username){
      message
    }
+
+// Collaboration/Session queries
+export const GET_SESSION_WITH_DETAILS = gql`
+  query GetSessionWithDetails($sessionId: String!, $userId: String) {
+    sessionWithDetails(sessionId: $sessionId, userId: $userId) {
+      id
+      match_id
+      question_id
+      code
+      language
+      status
+      end_at
+      created_at
+      updated_at
+      match {
+        id
+        user1_id
+        user2_id
+        status
+        created_at
+        ended_at
+      }
+      question {
+        id
+        title
+        description
+        difficulty
+        category
+        examples
+        constraints
+        created_at
+        updated_at
+      }
+    }
+  }
+`;
+
+export const SESSION_BY_MATCH = gql`
+  query SessionByMatch($matchId: String!) {
+    sessionByMatch(matchId: $matchId) {
+      id
+      match_id
+      question_id
+      code
+      language
+      status
+      end_at
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const IS_USER_PART_OF_SESSION = gql`
+  query IsUserPartOfSession($sessionId: String!, $userId: String!) {
+    isUserPartOfSession(sessionId: $sessionId, userId: $userId)
+  }
+`;
+
+export const END_SESSION = gql`
+  mutation EndSession($sessionId: String!) {
+    endSession(sessionId: $sessionId) {
+      id
+      status
+      end_at
+    }
+  }
+`;
+
+export const GET_QUESTION_ATTEMPTS = gql`
+  query GetQuestionAttempts($userId: ID!) {
+    questionAttemptsByUser(userId: $userId) {
+      id
+      userId
+      questionId
+      matchId
+      attemptedAt
+      createdAt
+      question {
+        id
+        title
+        description
+        difficulty
+        category
+      }
+    }
+  }
+`;
+
+export const GET_SUGGESTED_SOLUTIONS = gql`
+  query GetSuggestedSolutions($questionId: ID!) {
+    suggestedSolutionsForQuestion(questionId: $questionId) {
+      id
+      questionId
+      language
+      solutionCode
+      explanation
+      timeComplexity
+      spaceComplexity
+      createdAt
+      updatedAt
+    }
+
   }
 `;

@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
     PubSubService,
@@ -7,13 +7,19 @@ import {
     TOPICS,
     SUBSCRIPTIONS
 } from "@noclue/common";
+import { MatchingService } from "src/matching/matching.service";
 
 @Injectable()
 export class EventBusService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(EventBusService.name);
     private pubsubService: PubSubService;
+    private sessionEventHandler?: (payload: SessionEventPayload) => Promise<void>;
 
-    constructor(private readonly configService: ConfigService) {
+    constructor(
+        private readonly configService: ConfigService,
+        @Inject(forwardRef(() => MatchingService))
+        private readonly matchingService: MatchingService,
+    ) {
         const projectId = this.configService.get<string>('GCP_PROJECT_ID');
         const keyFilename = this.configService.get<string>('GCP_KEY_FILENAME');
         const emulatorHost = this.configService.get<string>('PUBSUB_EMULATOR_HOST');
@@ -65,25 +71,28 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
 
     /**
      * Subscribe to session events from Collaboration Service
-     */
-    private async subscribeToSessionEvents(): Promise<void> {
+    */
+    public async subscribeToSessionEvents(): Promise<void> {
         await this.pubsubService.subscribe<SessionEventPayload>(
             SUBSCRIPTIONS.SESSION_QUEUE_SUB,
             async (data) => {
-                await this.handleSessionEvent(data);
+                this.logger.log(`Received session event: ${data.eventType} for match ${data.matchId}`);
+
+                if (this.sessionEventHandler) {
+                    try {
+                        await this.sessionEventHandler(data);
+                    } catch (error) {
+                        this.logger.error(
+                            `Error while handling session event ${data.eventType} for match ${data.matchId}:`,
+                            error,
+                        );
+                    }
+                } else {
+                    this.logger.warn('Session event received but no handler registered');
+                }
             }
         );
         this.logger.log(`Subscribed to ${SUBSCRIPTIONS.SESSION_QUEUE_SUB}`);
-    }
-
-    /**
-     * Handle session events (session ended, expired, etc.)
-     */
-    private async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
-        this.logger.log(`Received session event: ${payload.eventType} for match ${payload.matchId}`);
-
-        // This method can be called by the matching service to update match status
-        // For now, just logging - the actual implementation should be in matching.service.ts
     }
 
     /**
@@ -91,5 +100,13 @@ export class EventBusService implements OnModuleInit, OnModuleDestroy {
      */
     public getPubSubService(): PubSubService {
         return this.pubsubService;
+    }
+
+    /**
+     * Register a handler for session lifecycle events
+     */
+    public registerSessionEventHandler(handler: (payload: SessionEventPayload) => Promise<void>): void {
+        this.sessionEventHandler = handler;
+        this.logger.log('Session event handler registered');
     }
 }

@@ -27,9 +27,11 @@ export default function SettingsModal({
   error: string;
   setError: Dispatch<SetStateAction<string>>;
 }) {
+
   const [activeTab, setActiveTab] = useState<
     "update" | "delete" | "get" | "changepw"
   >("get");
+
 
   const { session } = useAuth();
   const [password, setPassword] = useState("");
@@ -186,20 +188,6 @@ export default function SettingsModal({
 
         {/* Tabs */}
         <div className="flex border-b mb-6">
-          <button
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "get"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-800"
-            }`}
-            onClick={() => {
-              setActiveTab("get");
-              setIsConfirmed(false);
-              setError("");
-            }}
-          >
-            Account Details
-          </button>
           <button
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "update"

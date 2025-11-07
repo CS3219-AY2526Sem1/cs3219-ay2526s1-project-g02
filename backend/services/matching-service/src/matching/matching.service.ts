@@ -8,6 +8,7 @@ import { CancellationResultOutput } from './matching.dto';
 import { EventBusService } from 'src/event-bus/event-bus.service';
 import { Difficulty, MatchRequest, MatchResult, QueueMember } from 'src/utils/types';
 import { getCurrentUnixTimestamp } from 'src/utils/utils';
+import { SessionEventPayload } from '@noclue/common';
 
 /* -------------------- Interfaces -------------------- */
 interface MatchEndedPayload {
@@ -17,7 +18,7 @@ interface MatchEndedPayload {
 /* -------------------- Constants -------------------- */
 const MATCH_QUEUE_PREFIX = 'matching:queue:';
 const CANDIDATE_PEEK_COUNT = 50;
-const QUEUE_TTL_SECONDS = 120; // 2 minutes for debugging. TODO: CHANGE TO 5 MINUTES
+const QUEUE_TTL_SECONDS = 120; // 2 minutes.
 
 /* -------------------- Matching Service Class -------------------- */
 @Injectable()
@@ -142,8 +143,12 @@ export class MatchingService implements OnModuleInit {
 
     }
 
-    onModuleInit() {
-        // TODO: Subscribe to Event Bus for (1) match ended events
+    async onModuleInit() {
+        this.eventBusService.registerSessionEventHandler(
+            this.handleSessionEvent.bind(this)
+        );
+        await this.eventBusService.subscribeToSessionEvents();
+        this.logger.log('MatchingService subscribed to receive Session Events');
     }
 
     /* -------------------- Private Helper Methods -------------------- */
@@ -192,7 +197,7 @@ export class MatchingService implements OnModuleInit {
                 if (!potentialCandidate || !potentialCandidate.userId) {
                     throw new Error("Malformed candidate");
                 }
-            }  catch (e) {
+            } catch (e) {
                 this.logger.warn(`Failed to parse queue member JSON: ${candidateStr}`);
                 await this.redisService.removeUserFromQueue(key, candidateStr); // remove malformed entry
                 this.logger.log(`Removing malformed entry ${potentialCandidate?.userId} from queue ${key}`);
@@ -269,12 +274,18 @@ export class MatchingService implements OnModuleInit {
         // Step 2: Record the finalised match in database
         this.logger.log(`Recording finalised match in DB between ${user.userId} and ${matchedCandidate.userId}`);
 
-        const {data: matchData, error: matchError } = await this.supabase
+        // Calculate common topics
+        const user1TopicsSet = new Set(user.topics);
+        const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
+
+        const { data: matchData, error: matchError } = await this.supabase
             .from('matches')
             .insert({
                 user1_id: user.userId,
                 user2_id: matchedCandidate.userId,
                 status: 'active',
+                difficulty: user.difficulty,
+                common_topics: commonTopics,
             })
             .select('id')
             .single();
@@ -301,10 +312,8 @@ export class MatchingService implements OnModuleInit {
             matchData!.id,
         )
 
-        // Step 4: Publish to Event Bus (to notify Collaboration Service)
+        // Step 4: Publish to Event Bus (to notify Question Service)
         this.logger.log(`Publishing match found event for match ID ${matchData!.id} to Event Bus`);
-        const user1TopicsSet = new Set(user.topics);
-        const commonTopics = matchedCandidate.topics.filter(topic => user1TopicsSet.has(topic));
         this.eventBusService.publishMatchFound({
             matchId: matchData!.id,
             user1Id: user.userId,
@@ -315,18 +324,82 @@ export class MatchingService implements OnModuleInit {
         })
     }
 
+    // Handle session lifecycle events routed through Pub/Sub
+    public async handleSessionEvent(payload: SessionEventPayload): Promise<void> {
+        switch (payload.eventType) {
+            case 'session_started':
+                await this.handleSessionStarted(payload);
+                break;
+            case 'session_ended':
+            case 'session_expired':
+                await this.handleMatchEnded({ matchId: payload.matchId });
+                break;
+            default:
+                this.logger.warn(`Unhandled session event type: ${payload.eventType}`);
+        }
+    }
+
+    private async handleSessionStarted(payload: SessionEventPayload): Promise<void> {
+        const { matchId, sessionId } = payload;
+        if (!sessionId) {
+            this.logger.warn(`Session started event received without sessionId for match ${matchId}`);
+            return;
+        }
+
+        this.logger.log(`Handling session started event for match ${matchId}, session ${sessionId}`);
+
+        try {
+            const { data: matchRecord, error } = await this.supabase
+                .from('matches')
+                .select('user1_id, user2_id, status')
+                .eq('id', matchId)
+                .single();
+
+            if (error) {
+                this.logger.error(`Failed to retrieve match ${matchId} for session start: ${error.message}`);
+                return;
+            }
+
+            if (!matchRecord) {
+                this.logger.warn(`Match ${matchId} not found while handling session start`);
+                return;
+            }
+
+            const participantIds = [matchRecord.user1_id, matchRecord.user2_id].filter((id): id is string => Boolean(id));
+
+            if (participantIds.length === 0) {
+                this.logger.warn(`Match ${matchId} has no participants recorded; skipping session notification`);
+                return;
+            }
+
+        if (matchRecord.status !== 'active') {
+            const { error: updateError } = await this.supabase
+                .from('matches')
+                .update({ status: 'active' })
+                .eq('id', matchId);
+
+            if (updateError) {
+                this.logger.error(`Failed to update match ${matchId} status to active: ${updateError.message}`);
+            }
+        }
+
+            this.matchingGateway.notifySessionStarted(matchId, sessionId, participantIds);
+        } catch (error) {
+            this.logger.error(`Unexpected error handling session start for match ${matchId}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
     // Handle match ended (upon Collab Service event)
-    // TODO: Use this with event bus subscription
     private async handleMatchEnded(payload: MatchEndedPayload): Promise<void> {
         const { matchId } = payload;
         this.logger.log(`Handling match ended for match ID ${matchId}`);
 
         try {
             const { error, data } = await this.supabase
-            .from('matches')
-            .update({ status: 'ended', ended_at: new Date().toISOString() })
-            .eq('id', matchId)
-            .select();
+                .from('matches')
+                .update({ status: 'ended', ended_at: new Date().toISOString() })
+                .eq('id', matchId)
+                .select();
 
             if (error) {
                 this.logger.error(`Failed to update match status to ended for match ID ${matchId}: ${error.message}`);

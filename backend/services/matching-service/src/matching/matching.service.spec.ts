@@ -1,4 +1,4 @@
-import { RedisService } from "src/redis/redis.service";
+ import { RedisService } from "src/redis/redis.service";
 import { mockRedisService, mockMatchingGateway, mockCheckService, mockEventBusService, mockDatabaseService } from "./matching.mocks";
 import { MatchingService } from "./matching.service";
 import { Test, TestingModule } from '@nestjs/testing';
@@ -9,6 +9,7 @@ import { getCurrentUnixTimestamp, getQueueKey } from "src/utils/utils";
 import { CheckService } from "src/check/check.service";
 import { EventBusService } from "src/event-bus/event-bus.service";
 import { DatabaseService } from "src/database/database.service";
+import { SessionEventPayload } from "@noclue/common";
 
 const USER_A_REQUEST: MatchRequest = {
     userId: 'user-a',
@@ -81,6 +82,8 @@ describe('(A) MatchingService: Successful Match Flow', () => {
     const databaseMock = mockDatabaseService as any;
 
     beforeEach(async () => {
+        jest.clearAllMocks();
+
         // 1. Build testing module
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -98,7 +101,6 @@ describe('(A) MatchingService: Successful Match Flow', () => {
         testLogger = new ConsoleLogger('Testing');
 
         // 2. Cleanup and Reset before each test
-        jest.clearAllMocks();
         redisMock.resetQueueData();
         checkMock.isUserInActiveMatch.mockResolvedValue(false);
 
@@ -432,6 +434,8 @@ describe('(B) MatchingService: Successful Queue Flow', () => {
     const databaseMock = mockDatabaseService as any;
 
     beforeEach(async () => {
+        jest.clearAllMocks();
+
         // 1. Build testing module
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -449,7 +453,6 @@ describe('(B) MatchingService: Successful Queue Flow', () => {
         testLogger = new ConsoleLogger('Testing');
 
         // 2. Cleanup and Reset before each test
-        jest.clearAllMocks();
         redisMock.resetQueueData();
         checkMock.isUserInActiveMatch.mockResolvedValue(false);
 
@@ -618,6 +621,8 @@ describe('(C) MatchingService: Cancel Request Flow', () => {
     const databaseMock = mockDatabaseService as any;
 
     beforeEach(async () => {
+        jest.clearAllMocks();
+
         // 1. Build testing module
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -635,7 +640,6 @@ describe('(C) MatchingService: Cancel Request Flow', () => {
         testLogger = new ConsoleLogger('Testing');
 
         // 2. Cleanup and Reset before each test
-        jest.clearAllMocks();
         redisMock.resetQueueData();
         checkMock.isUserInActiveMatch.mockResolvedValue(false);
 
@@ -727,5 +731,145 @@ describe('(C) MatchingService: Cancel Request Flow', () => {
         expect(result.reason).toBeDefined();
         expect(result.reason).toContain('Request not found in active queues');
         expect(databaseMock.getClient().update).not.toHaveBeenCalled();
+    });
+});
+
+describe('(D) MatchingService: Match End Event Handling', () => {
+    let service: MatchingService;
+    let testLogger: ConsoleLogger;
+
+    const gatewayMock = mockMatchingGateway as any;
+    const redisMock = mockRedisService as any;
+    const checkMock = mockCheckService as any;
+    const eventMock = mockEventBusService as any;
+    const databaseMock = mockDatabaseService as any;
+
+    const mockMatchId = 'match-id-123';
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+
+        // Build testing module - standard setup
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                MatchingService,
+                { provide: MatchingGateway, useValue: mockMatchingGateway },
+                { provide: RedisService, useValue: mockRedisService },
+                { provide: CheckService, useValue: mockCheckService },
+                { provide: EventBusService, useValue: eventMock },
+                { provide: DatabaseService, useValue: databaseMock },
+            ],
+        })
+        .setLogger(new ConsoleLogger())
+        .compile();
+
+        await module.init();
+
+        service = module.get<MatchingService>(MatchingService);
+        testLogger = new ConsoleLogger('Testing');
+
+        // Reset specific Supabase mock implementations for this suite
+        databaseMock.getClient().from.mockReturnThis();
+        databaseMock.getClient().update.mockReturnThis();
+        databaseMock.getClient().eq.mockResolvedValue({ error: null }); // Default: successful update
+    });
+
+    // Scenario D1: Ensure service init and subscribes.
+    it("should be defined", () => {
+        expect(service).toBeDefined();
+        expect(eventMock.subscribeToSessionEvents).toHaveBeenCalledTimes(1);
+    });
+
+    // Scenario D2: Handle session ended event and update DB.
+    it("should handle session end event and update database", async () => {
+        testLogger.log("SCENARIO D2");
+
+        // Arrange: Prepare mock event data
+        const mockSessionEvent: SessionEventPayload = {
+            matchId: mockMatchId,
+            sessionId: 'session-123',
+            eventType: 'session_ended',
+            timestamp: new Date().toISOString(),
+        }
+
+        // Act: Trigger event handler
+        await service.handleSessionEvent(mockSessionEvent);
+
+        // Assert: Verify DB update called correctly
+        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
+        expect(databaseMock.getClient().update).toHaveBeenCalledWith(
+            expect.objectContaining({ 
+                status: 'completed',
+                ended_at: expect.any(String),
+            })
+        );
+        expect(databaseMock.getClient().eq).toHaveBeenCalledWith('id', mockMatchId);
+    });
+
+    // Scenario D3: Handle session expired event and update DB.
+    it("should handle session expired event and update database", async () => {
+        testLogger.log("SCENARIO D3");
+
+        // Arrange: Prepare mock event data
+        const mockSessionEvent: SessionEventPayload = {
+            matchId: mockMatchId,
+            sessionId: 'session-123',
+            eventType: 'session_expired',
+            timestamp: new Date().toISOString(),
+        }
+
+        // Act: Trigger event handler
+        await service.handleSessionEvent(mockSessionEvent);
+
+        // Assert: Verify DB update called correctly
+        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
+        expect(databaseMock.getClient().update).toHaveBeenCalledWith(
+            expect.objectContaining({ 
+                status: 'expired',
+                ended_at: expect.any(String),
+            })
+        );
+        expect(databaseMock.getClient().eq).toHaveBeenCalledWith('id', mockMatchId);
+    });
+
+    // Scenario D4: Ignore irrelevant session event type. 
+    it("should ignore irrelevant session event types", async () => {
+        testLogger.log("SCENARIO D4");
+
+        // Arrange: Prepare mock event data
+        const mockSessionEvent: SessionEventPayload = {
+            matchId: mockMatchId,
+            sessionId: 'session-123',
+            eventType: 'session_started',
+            timestamp: new Date().toISOString(),
+        }
+
+        // Act: Trigger event handler (session_started doesn't call handleMatchEnded)
+        await service.handleSessionEvent(mockSessionEvent);
+
+        // Assert: Verify DB update not called
+        expect(databaseMock.getClient().update).not.toHaveBeenCalled();
+        expect(databaseMock.getClient().eq).not.toHaveBeenCalled();
+    });
+
+    // Scenario D5: Database failure handling.
+    it("should handle database failure during session end handling", async () => {
+        testLogger.log("SCENARIO D5");
+
+        const mockSessionEvent: SessionEventPayload = {
+            matchId: mockMatchId,
+            sessionId: 'session-123',
+            eventType: 'session_ended',
+            timestamp: new Date().toISOString(),
+        }
+
+        // Arrange: Mock DB failure
+        databaseMock.getClient().eq.mockResolvedValueOnce({ error: { message: 'DB Update Failed' } });
+
+        // Act & Assert: Trigger event handler and expect error
+        await expect(service.handleSessionEvent(mockSessionEvent)).resolves.not.toThrow();
+
+        // Verify: DB update attempted
+        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
     });
 });

@@ -42,4 +42,21 @@ export class CollaborationGateway {
     client.leave(data.sessionId);
     client.to(data.sessionId).emit('userLeft', { userId: data.userId });
   }
+
+  @SubscribeMessage('terminateSession')
+  async handleTerminateSession(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    const { sessionId, userId } = data;
+    
+    // Update session status in database
+    await this.collaborationService.endSession(sessionId);
+    
+    // Notify all users in the session that it has been terminated
+    this.server.to(sessionId).emit('sessionTerminated', { 
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Leave the session
+    client.leave(sessionId);
+  }
 }

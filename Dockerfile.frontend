@@ -37,27 +37,35 @@ COPY frontend/tsconfig.json ./frontend/
 COPY frontend/next.config.js ./frontend/
 COPY frontend/tailwind.config.js ./frontend/
 COPY frontend/postcss.config.js ./frontend/
+COPY frontend/components.json ./frontend/
 COPY frontend/src ./frontend/src
 COPY frontend/public ./frontend/public
 
 # Install dependencies from root (for workspace)
 RUN npm install
 
-# Build frontend
+# Set working directory for dev/build
 WORKDIR /app/frontend
+
+# Stage 2.5: Dev environment (no build needed)
+FROM frontend-builder AS frontend-dev
+# Dev mode - npm run dev handles everything
+
+# Stage 3: Build for production
+FROM frontend-builder AS frontend-prod
 RUN npm run build
 
-# Stage 3: Production
+# Stage 4: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy necessary files from builder
+# Copy necessary files from prod builder
 # The standalone output includes the full directory structure
-COPY --from=frontend-builder /app/frontend/.next/standalone ./
-COPY --from=frontend-builder /app/frontend/.next/static ./frontend/.next/static
-COPY --from=frontend-builder /app/frontend/public ./frontend/public
+COPY --from=frontend-prod /app/frontend/.next/standalone ./
+COPY --from=frontend-prod /app/frontend/.next/static ./frontend/.next/static
+COPY --from=frontend-prod /app/frontend/public ./frontend/public
 
 EXPOSE 3000
 

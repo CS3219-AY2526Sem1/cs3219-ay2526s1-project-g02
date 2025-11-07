@@ -67,7 +67,7 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
 ### 2. question-queue
 - **Publisher**: Question Service
 - **Subscriber**: Collaboration Service (via `question-queue-sub`)
-- **Purpose**: Notify when a question has been assigned to a match
+- **Purpose**: Deliver assigned question details to the collaboration layer
 - **Message Schema**:
   ```typescript
   interface QuestionAssignedPayload {
@@ -77,6 +77,15 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
     questionDescription: string;
     difficulty: 'easy' | 'medium' | 'hard';
     topics: string[];
+    testCases: QuestionTestCasePayload[];
+  }
+
+  interface QuestionTestCasePayload {
+    id: string;
+    input: unknown;
+    expectedOutput: unknown;
+    isHidden: boolean;
+    orderIndex: number;
   }
   ```
 
@@ -88,10 +97,13 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
   ```typescript
   interface SessionEventPayload {
     matchId: string;
+    sessionId: string;
     eventType: 'session_started' | 'session_ended' | 'session_expired';
     timestamp: string;
   }
   ```
+
+  The `sessionId` identifies the collaboration session for both start and end events. When `eventType === 'session_started'`, the Matching Service forwards that identifier over WebSocket so the frontend can navigate directly to the collaborative editor without polling.
 
 ## Setup Instructions
 
@@ -259,7 +271,7 @@ gcloud pubsub subscriptions list
 
 ### View Undelivered Messages
 ```bash
-gcloud pubsub subscriptions pull matching-queue-sub --limit=10
+   gcloud pubsub subscriptions pull matching-queue-sub --limit=10
 ```
 
 ## Cleanup

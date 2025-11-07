@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Redis (for matching queue)
@@ -37,6 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.user-service
+      target: builder
     container_name: noclue-user-service
     ports:
       - "4001:4001"
@@ -50,10 +51,22 @@ services:
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend/services/user-service/src:/app/backend/services/user-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/user-service/node_modules
+    command: sh -c "cd /app/backend/services/user-service && npm run start:dev"
     networks:
       - noclue-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,6 +76,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.question-service
+      target: builder
     container_name: noclue-question-service
     ports:
       - "4002:4002"
@@ -73,17 +87,30 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GCP_KEY_FILENAME=/secrets/gcp/service-account-key.json
       - USER_SERVICE_URL=http://user-service:4001
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/question-service/src:/app/backend/services/question-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/question-service/node_modules
+    command: sh -c "cd /app/backend/services/question-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
     networks:
       - noclue-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -93,6 +120,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.matching-service
+      target: builder
     container_name: noclue-matching-service
     ports:
       - "4003:4003"
@@ -103,20 +131,33 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GCP_KEY_FILENAME=/secrets/gcp/service-account-key.json
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/matching-service/src:/app/backend/services/matching-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/matching-service/node_modules
+    command: sh -c "cd /app/backend/services/matching-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
       - redis
     networks:
       - noclue-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -126,10 +167,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.collaboration-service
+      target: builder
     container_name: noclue-collaboration-service
     ports:
       - "4004:4004"
-      - "1234:1234"  # Yjs WebSocket port
+      - "1234:1234" # Yjs WebSocket port
     environment:
       - PORT=4004
       - YJS_PORT=1234
@@ -138,17 +180,70 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - GCP_KEY_FILENAME=/secrets/gcp/service-account-key.json
       - USER_SERVICE_URL=http://user-service:4001
       - QUESTION_SERVICE_URL=http://question-service:4002
       - MATCHING_SERVICE_URL=http://matching-service:4003
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./gcp-pubsub-key.json:/secrets/gcp/service-account-key.json
+      - ./backend/services/collaboration-service/src:/app/backend/services/collaboration-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/collaboration-service/node_modules
+    command: sh -c "cd /app/backend/services/collaboration-service && npm run start:dev"
     depends_on:
       - pubsub-emulator
     networks:
       - noclue-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  llm-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.llm-service
+      target: builder
+    container_name: noclue-llm-service
+    ports:
+      - "4005:4005"
+    environment:
+      - PORT=4005
+      - NODE_ENV=${NODE_ENV:-development}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - USER_SERVICE_URL=http://user-service:4001
+      - QUESTION_SERVICE_URL=http://question-service:4002
+      - MATCHING_SERVICE_URL=http://matching-service:4003
+      - COLLABORATION_SERVICE_URL=http://collaboration-service:4004
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - ./backend/services/llm-service/src:/app/backend/services/llm-service/src
+      - ./common/src:/app/common/src
+      - /app/node_modules
+      - /app/backend/services/llm-service/node_modules
+    command: sh -c "cd /app/backend/services/llm-service && npm run start:dev"
+    networks:
+      - noclue-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -159,13 +254,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      args:
-        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-        - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${SUPABASE_KEY}
-        - NEXT_PUBLIC_GRAPHQL_URL=${NEXT_PUBLIC_GRAPHQL_URL:-http://localhost:4001/graphql}
-        - NEXT_PUBLIC_QUESTION_GRAPHQL_URL=${NEXT_PUBLIC_QUESTION_GRAPHQL_URL:-http://localhost:4002/graphql}
-        - NEXT_PUBLIC_MATCHING_GRAPHQL_URL=${NEXT_PUBLIC_MATCHING_GRAPHQL_URL:-http://localhost:4003/graphql}
-        - NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL=${NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL:-http://localhost:4004/graphql}
+      target: frontend-dev
     container_name: noclue-frontend
     ports:
       - "3000:3000"
@@ -175,21 +264,39 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${SUPABASE_KEY}
       - NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4001/graphql
+      - NEXT_PUBLIC_QUESTION_GRAPHQL_URL=http://localhost:4002/graphql
+      - NEXT_PUBLIC_MATCHING_GRAPHQL_URL=http://localhost:4003/graphql
+      - NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL=http://localhost:4004/graphql
       - NEXT_PUBLIC_USER_SERVICE_URL=http://localhost:4001
       - NEXT_PUBLIC_QUESTION_SERVICE_URL=http://localhost:4002
       - NEXT_PUBLIC_MATCHING_SERVICE_URL=http://localhost:4003
       - NEXT_PUBLIC_COLLABORATION_SERVICE_URL=http://localhost:4004
+      - NEXT_PUBLIC_LLM_SERVICE_URL=http://localhost:4005
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:1234}
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-change-in-production}
+    volumes:
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/public:/app/frontend/public
+      - /app/frontend/node_modules
+      - /app/frontend/.next
+    command: sh -c "cd /app/frontend && npm run dev"
     depends_on:
       - user-service
       - question-service
       - matching-service
       - collaboration-service
+      - llm-service
     networks:
       - noclue-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

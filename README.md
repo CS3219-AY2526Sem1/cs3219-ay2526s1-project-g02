@@ -5,9 +5,10 @@ Microservices-based coding platform with Next.js frontend and NestJS backend, de
 ## Quick Links
 
 - [Setup Guide](./docs/SETUP.md) - First-time deployment and local development
-- [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging architecture
+- [Question Service](backend/services/question-service/README.md) - Complete API & SQL setup
+- [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging
+- [Attempt History](docs/ATTEMPT_HISTORY_IMPLEMENTATION.md) - User attempt tracking
 - [Troubleshooting](./docs/TROUBLESHOOTING.md) - Debug common issues
-- [Disaster Recovery](./docs/DISASTER_RECOVERY.md) - Emergency procedures and backups
 
 ## Architecture Overview
 
@@ -78,12 +79,12 @@ flowchart TB
     subgraph Question["Question Service :4002"]
         matchConsumer["Pub/Sub Subscriber<br/>matching-queue-sub"]
         allocator["Question Allocator<br/>Difficulty & Topic Based"]
-        questionProducer["Pub/Sub Publisher<br/>question-queue"]
+        questionPublisher["Pub/Sub Publisher<br/>question-queue"]
         graphqlResolver["GraphQL Resolver<br/>Question Queries"]
 
         matchConsumer --> allocator
         allocator --> supabaseDb
-        allocator --> questionProducer
+        allocator --> questionPublisher
         graphqlResolver --> supabaseDb
     end
 
@@ -92,20 +93,20 @@ flowchart TB
         sessionManager["Session Manager<br/>Yjs-based Collaboration"]
         socketGateway["Socket.IO Gateway<br/>Real-time Sync"]
         yjsBridge["Yjs Document Sync<br/>CRDT"]
-        sessionProducer["Pub/Sub Publisher<br/>session-queue"]
+        sessionPublisher["Pub/Sub Publisher<br/>session-queue"]
 
         questionConsumer --> sessionManager
         sessionManager --> supabaseDb
         sessionManager --> socketGateway
         socketGateway <--> yjsBridge
-        sessionManager --> sessionProducer
+        sessionManager --> sessionPublisher
     end
 
     matchProducer -->|publishes| pubsub
     pubsub -->|matching-queue-sub| matchConsumer
-    questionProducer -->|publishes| pubsub
+    questionPublisher -->|publishes| pubsub
     pubsub -->|question-queue-sub| questionConsumer
-    sessionProducer -->|publishes| pubsub
+    sessionPublisher -->|publishes| pubsub
     pubsub -->|session-queue-sub| sessionConsumer
 
     style Match fill:#e1f5ff
@@ -116,10 +117,9 @@ flowchart TB
 
 **Message Flow:**
 1. **Match Found** → Matching Service publishes to `matching-queue`
-2. **Question Assignment** → Question Service receives match, assigns question, publishes to `question-queue`
-3. **Session Start** → Collaboration Service receives question, provisions session
-4. **Session End** → Collaboration Service publishes to `session-queue`
-5. **Match Complete** → Matching Service receives session end, updates match status
+2. **Question Assignment** → Question Service consumes match, assigns question, publishes to `question-queue`
+3. **Session Provisioned** → Collaboration Service consumes `question-queue` events, creates collaboration session, and publishes lifecycle updates (with `sessionId`) to `session-queue`
+4. **Client Notified** → Matching Service consumes `session-queue` and emits a `sessionStarted` WebSocket event so both users can jump straight into the editor
 
 For detailed Pub/Sub integration, see [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md).
 
@@ -473,6 +473,7 @@ See [Setup Guide](./docs/SETUP.md) for cost optimization tips.
 
 - [Setup Guide](./docs/SETUP.md) - Complete setup and configuration
 - [Pub/Sub Integration Guide](./docs/PUBSUB_INTEGRATION.md) - Messaging architecture and setup
+- [Attempt History](./docs/ATTEMPT_HISTORY_IMPLEMENTATION.md) - Question attempts & solutions
 - [Troubleshooting Guide](./docs/TROUBLESHOOTING.md) - Debug common issues
 - [Disaster Recovery Guide](./docs/DISASTER_RECOVERY.md) - Backups and emergency procedures
 

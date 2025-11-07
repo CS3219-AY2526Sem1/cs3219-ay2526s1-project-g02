@@ -1,7 +1,8 @@
 "use client";
 
-import { PageHeader, PageLayout } from "@/components/layout";
+import { PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Button, Loading } from "@/components/ui";
 import {
   CANCEL_MATCH_MUTATION,
@@ -14,27 +15,11 @@ import {
 } from "@/lib/socket/socket";
 import { useMutation } from "@apollo/client";
 import {
-  CancelMatchRequestInput,
   MatchRequestInput,
   MatchResultOutput,
 } from "@noclue/common";
-import { useCallback, useEffect, useState } from "react";
-
-// TODO: Temporary test user Ids (to be replaced with auth)
-const TEST_USER_IDS = {
-  testUser32: "0809ff88-e25c-42af-b8f0-820cf73e2fee",
-  testUser16: "12a29bf7-f924-432a-abd2-0afa36d03f39",
-};
-
-// TODO: Temporary selection of test user from URL
-const getTestUserId = () => {
-  if (typeof window !== "undefined") {
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryId = urlParams.get("userId");
-    if (queryId) return queryId;
-  }
-  return TEST_USER_IDS.testUser32;
-};
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const LANGUAGES = ["JavaScript", "Python", "Java", "C++", "Go", "Rust"];
 const TOPICS = [
@@ -57,9 +42,15 @@ type MatchStatus =
   | "ERROR";
 
 export default function MatchingPage() {
-  // Todo: Retrieve test user Id (replace with auth later)
-  const ACTIVE_USER_ID = getTestUserId();
 
+  const router = useRouter();
+
+  // Get userId from auth
+  const { session, loading: authLoading } = useAuth();
+  const ACTIVE_USER_ID = session?.user?.id || null;
+  const ACCESS_TOKEN = session?.access_token || "";
+
+  // State Variables   
   const [status, setStatus] = useState<MatchStatus>("IDLE");
   const [matchResult, setMatchResult] = useState<MatchResultOutput | null>(
     null
@@ -79,6 +70,23 @@ export default function MatchingPage() {
   const [formLanguage, setFormLanguage] = useState<string>(LANGUAGES[0]);
   const [formTopics, setFormTopics] = useState<string[]>([]);
   const [formDifficulty, setFormDifficulty] = useState<string>(DIFFICULTIES[0]);
+
+  // Loading auth
+  if (authLoading) {
+    return (
+      <PageLayout header={<NavBar></NavBar>}>
+        <div className="flex justify-center items-center h-full pt-20">
+          <Loading message="Loading user session..." />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Not authenticated yet
+  if (!session) {
+    router.push("/login");
+    return null;
+  }
 
   // Helper to dismiss notification
   const dismissNotification = () => {
@@ -157,7 +165,6 @@ export default function MatchingPage() {
         !result.queued &&
         result.reason === "User already in active match"
       ) {
-        console.warn("User is already in an active match.");
         setStatus("ERROR");
         setNotification({
           message: "You are already in an active match.",
@@ -167,7 +174,6 @@ export default function MatchingPage() {
       }
 
       if (result.matchFound) {
-        console.log("Match found immediately:", result);
         setStatus("MATCH_FOUND");
         setNotification({
           message: "Match found successfully!",
@@ -175,7 +181,6 @@ export default function MatchingPage() {
         });
         // TODO: Show matchedUserId somewhere in the UI
       } else if (result.queued) {
-        console.log("No immediate match, queued for matching:", result);
         setStatus("QUEUED");
       }
     },
@@ -196,7 +201,6 @@ export default function MatchingPage() {
       onCompleted(data) {
         const result = data.cancelMatchRequest;
         if (result.success) {
-          console.log("Match request cancelled successfully");
           setStatus("CANCELLED");
           setNotification({
             message: "Match request cancelled successfully.",
@@ -237,7 +241,6 @@ export default function MatchingPage() {
   const handleCancelMatch = () => {
     const requestId = matchResult?.requestId;
     if (status !== "QUEUED" || !requestId) {
-      console.warn("No active match request to cancel.");
       return;
     }
     if (canceling) return; // Prevent multiple requests
@@ -246,14 +249,14 @@ export default function MatchingPage() {
 
   // 3. Initial Socket.IO Connection
   useEffect(() => {
-    if (ACTIVE_USER_ID) {
-      matchingSocket.auth = { userId: ACTIVE_USER_ID };
-      console.log("Set socket auth with userId:", { userId: ACTIVE_USER_ID });
+    if (!ACTIVE_USER_ID) {
+        return;
     }
+
+    matchingSocket.auth = { userId: ACTIVE_USER_ID };
 
     if (!matchingSocket.connected) {
       matchingSocket.connect();
-      console.log("Attempting initial socket connection...");
     }
 
     const onConnect = () => setSocketStatus("connected");
@@ -267,27 +270,27 @@ export default function MatchingPage() {
       matchingSocket.off("disconnect", onDisconnect);
       if (matchingSocket.connected) matchingSocket.disconnect();
     };
-  }, []);
+  }, [ACTIVE_USER_ID]);
 
   // 4. Socket.IO Listeners
   useEffect(() => {
     // Event Listener for 'matchFound' (i.e. match found after being queued)
     const handleMatchFoundEvent = (data: MatchFoundData) => {
-      if (status === "QUEUED" && matchResult) {
-        console.log("Match found!", data);
-        setFinalMatchData(data);
+      setFinalMatchData(data);
+
+      if (status !== "MATCH_FOUND") {
         setStatus("MATCH_FOUND");
-        setNotification({
-          message: "Match found successfully!",
-          status: "MATCH_FOUND",
-        });
       }
+
+      setNotification({
+        message: "Match found successfully!",
+        status: "MATCH_FOUND",
+      });
     };
 
     // Event Listener for 'requestExpired' (i.e. match request expired)
     const handleRequestExpiredEvent = (data: RequestExpiredData) => {
       if (status === "QUEUED") {
-        console.log("Match request expired:", data);
         setStatus("REQUEST_EXPIRED");
         setMatchResult(null);
         setNotification({
@@ -475,12 +478,15 @@ export default function MatchingPage() {
               </span>
               <Button
                 onClick={() => {
-                  console.log("Navigating to session...");
-                  dismissNotification();
+                  if (!finalMatchData?.matchId) {
+                    return;
+                  }
+                  router.push(`/question-selection?matchId=${finalMatchData.matchId}`);
                 }}
                 variant="primary"
+                disabled={!finalMatchData?.matchId}
               >
-                Go to Session
+                {finalMatchData?.matchId ? "Go to Session" : "Preparing session..."}
               </Button>
             </div>
           ) : status === "LOADING" ? (

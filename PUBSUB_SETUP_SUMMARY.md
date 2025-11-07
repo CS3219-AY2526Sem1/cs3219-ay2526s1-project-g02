@@ -12,8 +12,8 @@
 
 #### Matching Service
 - ✅ Replaced stub event-bus with real Pub/Sub implementation
-- ✅ Publishes to `matching-queue` when match is found
-- ✅ Subscribes to `session-queue-sub` for session events from Collaboration Service
+- ✅ Publishes to `matching-queue` when a match is found
+- ✅ Subscribes to `session-queue-sub` for session lifecycle updates
 - **File**: `backend/services/matching-service/src/event-bus/event-bus.service.ts`
 
 #### Question Service
@@ -47,10 +47,34 @@
 - ✅ Cleanup script: `scripts/cleanup-pubsub.ts`
 - ✅ Added npm scripts: `npm run setup:pubsub` and `npm run cleanup:pubsub`
 - ✅ Updated `.env.example` with Pub/Sub configuration
+- ✅ Smoke test helper: `node scripts/question-service-pubsub.js smoke-test`
+  - Automatically bootstraps a `matches` row in Supabase unless `SMOKE_CREATE_MATCH_RECORD=false`
 
 ### 5. Documentation
 - ✅ Comprehensive guide: `docs/PUBSUB_INTEGRATION.md`
 - ✅ Includes usage examples, troubleshooting, and best practices
+
+### 6. Question Selection Flow
+- ✅ GraphQL mutation `submitQuestionSelection` records each participant’s pick and publishes a question once both have submitted
+- ✅ GraphQL query `questionSelectionStatus` exposes the current state (pending users, chosen question)
+- ✅ Supabase table `question_selections` stores interim selections and the winning choice; create it with:
+  ```sql
+  create extension if not exists "pgcrypto";
+
+  create table if not exists public.question_selections (
+    id uuid primary key default gen_random_uuid(),
+    match_id uuid not null references public.matches(id) on delete cascade,
+    user_id uuid not null,
+    question_id uuid not null references public.questions(id) on delete cascade,
+    is_winner boolean,
+    submitted_at timestamptz default now(),
+    finalized_at timestamptz,
+    created_at timestamptz default now()
+  );
+
+  create unique index if not exists question_selections_match_user_idx
+    on public.question_selections(match_id, user_id);
+  ```
 
 ## 📋 Next Steps
 
@@ -99,97 +123,21 @@ PUBSUB_EMULATOR_HOST=localhost:8085
    npm run setup:pubsub
    ```
 
-### 3. Implement Message Handlers
+### 3. Message Flow Summary
 
-You need to implement the actual business logic handlers in each service:
+With all handlers in place, the end-to-end workflow behaves as follows:
 
-#### Question Service
-In `backend/services/question-service/src/questions/questions.service.ts`:
+- **Matching Service**
+  - Publishes `MatchFound` messages on `matching-queue`.
+  - Listens to `session-queue` and pushes `sessionStarted` WebSocket events (with the collaboration `sessionId`) when it receives a lifecycle update from the Collaboration Service. Also updates match status on `session_ended` / `session_expired`.
 
-```typescript
-import { EventBusService } from '../event-bus/event-bus.service';
-import { MatchFoundPayload } from '@noclue/common';
+- **Question Service**
+  - Consumes `MatchFound` messages to pre-warm data.
+  - Records participant submissions via `submitQuestionSelection`, finalises the winning question once both picks are in, and publishes a `QuestionAssigned` payload on `question-queue`.
+  - Exposes `questionSelectionStatus` so clients can poll while waiting.
 
-@Injectable()
-export class QuestionsService implements OnModuleInit {
-  constructor(private readonly eventBusService: EventBusService) {}
-
-  async onModuleInit() {
-    // Register handler for match found events
-    this.eventBusService.registerMatchFoundHandler(
-      async (payload: MatchFoundPayload) => {
-        await this.handleMatchFound(payload);
-      }
-    );
-  }
-
-  private async handleMatchFound(payload: MatchFoundPayload) {
-    // TODO: Implement logic to:
-    // 1. Find a suitable question based on difficulty and topics
-    // 2. Publish to collaboration service
-    const question = await this.findQuestionByDifficultyAndTopics(
-      payload.difficulty,
-      payload.commonTopics
-    );
-
-    await this.eventBusService.publishQuestionAssigned({
-      matchId: payload.matchId,
-      questionId: question.id,
-      questionTitle: question.title,
-      questionDescription: question.description,
-      difficulty: question.difficulty,
-      topics: question.topics,
-    });
-  }
-}
-```
-
-#### Collaboration Service
-In `backend/services/collaboration-service/src/collaboration/collaboration.service.ts`:
-
-```typescript
-import { EventBusService } from '../event-bus/event-bus.service';
-import { QuestionAssignedPayload } from '@noclue/common';
-
-@Injectable()
-export class CollaborationService implements OnModuleInit {
-  constructor(private readonly eventBusService: EventBusService) {}
-
-  async onModuleInit() {
-    // Register handler for question assigned events
-    this.eventBusService.registerQuestionAssignedHandler(
-      async (payload: QuestionAssignedPayload) => {
-        await this.handleQuestionAssigned(payload);
-      }
-    );
-  }
-
-  private async handleQuestionAssigned(payload: QuestionAssignedPayload) {
-    // TODO: Implement logic to:
-    // 1. Create collaboration session
-    // 2. Setup collaborative code editor
-    // 3. Notify users via WebSocket
-  }
-
-  async endSession(matchId: string) {
-    // Publish session ended event
-    await this.eventBusService.publishSessionEvent({
-      matchId,
-      eventType: 'session_ended',
-      timestamp: new Date().toISOString(),
-    });
-  }
-}
-```
-
-#### Matching Service
-Update `backend/services/matching-service/src/matching/matching.service.ts`:
-
-```typescript
-// The publishMatchFound is already integrated at line 308
-// Just need to update the handleSessionEvent in event-bus.service.ts
-// to call the handleMatchEnded method that already exists at line 320
-```
+- **Collaboration Service**
+  - Consumes `QuestionAssigned` messages, creates the shared editor session, triggers Yjs initialisation, and publishes a `session_started` event (including the new `sessionId`) back to Pub/Sub so the Matching Service can notify both users in real time.
 
 ### 4. Testing
 
@@ -209,6 +157,11 @@ Update `backend/services/matching-service/src/matching/matching.service.ts`:
    - Verify Question Service receives the event
    - Verify Collaboration Service receives question assignment
    - Verify Matching Service receives session events
+   - For a manual frontend smoke test, keep the client running, submit a match request, then execute:
+     ```bash
+     node scripts/question-service-pubsub.js smoke-test
+     ```
+     Override any payload fields with `MATCH_*` or `QUESTION_*` environment variables (for example, `MATCH_TOPICS="Graphs and Trees"`). Set `SMOKE_PUBLISH_QUESTION=false` if the Question Service should generate the follow-up event instead of the helper. To skip the automatic Supabase match bootstrap, set `SMOKE_CREATE_MATCH_RECORD=false`.
 
 ## 🔧 Configuration Files Modified
 

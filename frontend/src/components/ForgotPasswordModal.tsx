@@ -22,7 +22,6 @@ export default function ForgotPasswordPage() {
       });
 
       const data = await res.json();
-      console.log("data", data);
 
       if (res.ok) {
         router.push("/forgot-password-success");
