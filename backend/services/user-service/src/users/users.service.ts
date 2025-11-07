@@ -190,6 +190,7 @@ export class UsersService {
     return {
       message: "Username updated successfully",
     };
+  }
 
   async getUsersByIds(userIds: string[]) {
     const { data, error } = await this.supabase
@@ -202,12 +203,15 @@ export class UsersService {
       throw error;
     }
 
+    if (!data) {
+      return [];
+    }
+
     return data.map((user) => ({
       id: user.id,
       email: user.email,
       name: user.username,
       createdAt: user.created_at,
     }));
-
   }
 }

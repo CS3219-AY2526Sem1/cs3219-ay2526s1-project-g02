@@ -202,6 +202,7 @@ export const UPDATE_MY_USERNAME = `
     updateMyUsername(id: $id, username: $username){
      message
    }
+`;
 
 // Collaboration/Session queries
 export const GET_SESSION_WITH_DETAILS = gql`
