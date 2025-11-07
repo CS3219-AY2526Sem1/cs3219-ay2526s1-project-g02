@@ -5,7 +5,14 @@ import { Input } from "./ui/input";
 import { Divide } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { DELETE_ACCOUNT_WITH_INPUT, VERIFY_PASSWORD } from "@/lib/queries";
+import {
+  DELETE_ACCOUNT_WITH_INPUT,
+  IS_USERNAME_TAKEN,
+  MY_USERNAME_QUERY,
+  UPDATE_MY_USERNAME,
+  VERIFY_PASSWORD,
+} from "@/lib/queries";
+import UpdatePasswordModal from "./UpdatePasswordModal";
 
 export default function SettingsModal({
   onClose,
@@ -20,13 +27,90 @@ export default function SettingsModal({
   error: string;
   setError: Dispatch<SetStateAction<string>>;
 }) {
-  const [activeTab, setActiveTab] = useState<"update" | "delete">(
-    "update"
-  );
+
+  const [activeTab, setActiveTab] = useState<
+    "update" | "delete" | "get" | "changepw"
+  >("get");
+
 
   const { session } = useAuth();
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const [username, setUsername] = useState<string>("");
+  const [isChecking, setIsChecking] = useState(false);
+  const [isUserNameTaken, setIsUserNameTaken] = useState(false);
+  const [initialUser, setInitialUser] = useState("");
+
+  useEffect(() => {
+    const getData = setTimeout(async () => {
+      try {
+        setIsChecking(true);
+
+        const userNameRes = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: IS_USERNAME_TAKEN,
+            variables: { username },
+          }),
+        });
+
+        const userNamejson = await userNameRes.json();
+
+        const userNameTaken: boolean = userNamejson.data.isUsernameTaken;
+
+        setIsUserNameTaken(userNameTaken);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsChecking(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(getData);
+  }, [username]);
+
+  useEffect(() => {
+    async function getUsername() {
+      const id = session.user.id;
+      const res = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: MY_USERNAME_QUERY,
+          variables: { id },
+        }),
+      });
+      const json = await res.json();
+
+      const myUsername: string = json.data?.myUsername ?? "";
+      setInitialUser(myUsername);
+      setUsername(myUsername);
+    }
+
+    getUsername();
+  }, []);
+
+  async function handleChangeUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isChecking) {
+      const id = session.user.id;
+      try {
+        const res = await fetch(process.env.NEXT_PUBLIC_GRAPHQL_URL!, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: UPDATE_MY_USERNAME,
+            variables: { id, username },
+          }),
+        });
+        const json = await res.json();
+        onClose();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
 
   async function handleDeleteAccount() {
     const userId = session.user.id;
@@ -118,6 +202,21 @@ export default function SettingsModal({
           >
             Update Details
           </button>
+
+          <button
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "changepw"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+            onClick={() => {
+              setActiveTab("changepw");
+              setIsConfirmed(false);
+              setError("");
+            }}
+          >
+            Change Password
+          </button>
           <button
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "delete"
@@ -141,18 +240,37 @@ export default function SettingsModal({
               <p className="text-gray-700 text-sm">
                 You can update your account details below.
               </p>
-              <input
+              <Input
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setIsUserNameTaken(false); // clear stale verdict immediately
+                  setIsChecking(true);
+                }}
+                value={username as string}
                 type="text"
                 placeholder="Username"
                 className="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              {isUserNameTaken && username.trim() !== initialUser && (
+                <div className="text-red-500 text-xs">
+                  *Username has already been taken.
+                </div>
+              )}
+              {username.trim() &&
+                username.trim() !== initialUser &&
+                isChecking && (
+                  <div className="text-gray-500 text-xs">Checking…</div>
+                )}
+
               <div className="mb-4 flex justify-end">
-                <Button>Save Changes</Button>
+                <Button
+                  onClick={(e) => {
+                    handleChangeUser(e);
+                  }}
+                  className=" cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
+                >
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
@@ -199,6 +317,15 @@ export default function SettingsModal({
                   </Button>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === "changepw" && (
+            <div className="flex flex-col gap-y-6">
+              <UpdatePasswordModal
+                isForgot={false}
+                onClose={onClose}
+              ></UpdatePasswordModal>
             </div>
           )}
         </div>

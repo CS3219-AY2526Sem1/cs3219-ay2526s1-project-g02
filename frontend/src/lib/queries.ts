@@ -164,8 +164,8 @@ export const VERIFY_PASSWORD = `
 export const UPDATE_PASSWORD = `
   mutation UpdatePassword($input: UpdatePasswordInput!) {
     updatePassword(input: $input){
-    }
     message
+   }
   }
 `;
 
@@ -189,6 +189,19 @@ export const IS_USERNAME_TAKEN = `
     isUsernameTaken(username: $username)
   }
 `;
+
+
+export const MY_USERNAME_QUERY = `
+  query MyUsername($id: String!) {
+    myUsername(id: $id)
+  }
+`;
+
+export const UPDATE_MY_USERNAME = `
+  mutation UpdateMyUsername($id: String!, $username: String!) {
+    updateMyUsername(id: $id, username: $username){
+     message
+   }
 
 // Collaboration/Session queries
 export const GET_SESSION_WITH_DETAILS = gql`
@@ -291,5 +304,6 @@ export const GET_SUGGESTED_SOLUTIONS = gql`
       createdAt
       updatedAt
     }
+
   }
 `;

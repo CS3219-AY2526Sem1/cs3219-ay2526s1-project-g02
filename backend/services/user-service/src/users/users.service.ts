@@ -165,6 +165,32 @@ export class UsersService {
     }
   }
 
+
+  async getMyUsername(id: string) {
+    const { data, error } = await this.supabase
+      .from("users")
+      .select("username")
+      .eq("id", id)
+      .single();
+    if (error) throw error;
+
+    return data?.username ?? null;
+  }
+
+  async updateMyUsername(id: string, newUsername: string) {
+    const { data, error } = await this.supabase
+      .from("users")
+      .update({ username: newUsername })
+      .eq("id", id);
+
+    if (error) {
+      return { message: "Password updated unsuccessfully" };
+    }
+
+    return {
+      message: "Username updated successfully",
+    };
+
   async getUsersByIds(userIds: string[]) {
     const { data, error } = await this.supabase
       .from("users")
@@ -182,5 +208,6 @@ export class UsersService {
       name: user.username,
       createdAt: user.created_at,
     }));
+
   }
 }
