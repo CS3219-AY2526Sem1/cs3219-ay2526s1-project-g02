@@ -169,7 +169,7 @@ export const IS_EMAIL_TAKEN = `
   }
 `;
 
-export const IS_USERNAME_TAKEN = `
+export const IS_USERNAME_TAKEN = gql`
   query IsUsernameTaken($username: String!) {
     isUsernameTaken(username: $username)
   }
