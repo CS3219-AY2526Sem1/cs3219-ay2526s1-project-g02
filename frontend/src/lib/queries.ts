@@ -272,6 +272,15 @@ export const END_SESSION = gql`
   }
 `;
 
+export const UPDATE_SESSION_LANGUAGE = gql`
+  mutation UpdateSessionLanguage($sessionId: String!, $language: String!) {
+    updateSessionLanguage(sessionId: $sessionId, language: $language) {
+      id
+      language
+    }
+  }
+`;
+
 export const GET_QUESTION_ATTEMPTS = gql`
   query GetQuestionAttempts($userId: ID!) {
     questionAttemptsByUser(userId: $userId) {

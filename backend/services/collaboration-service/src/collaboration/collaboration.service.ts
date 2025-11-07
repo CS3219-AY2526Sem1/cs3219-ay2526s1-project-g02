@@ -148,6 +148,18 @@ export class CollaborationService {
     return data;
   }
 
+  async updateLanguage(sessionId: string, language: string) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .update({ language })
+      .eq('id', sessionId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update language: ${error.message}`);
+    return data;
+  }
+
   async endSession(sessionId: string) {
     const { data, error } = await supabase
       .from('sessions')

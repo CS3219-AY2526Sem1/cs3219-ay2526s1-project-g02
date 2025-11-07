@@ -12,6 +12,7 @@ import {
   GET_USERS,
   END_SESSION,
   GET_TESTCASES_FOR_QUESTION,
+  UPDATE_SESSION_LANGUAGE,
 } from "@/lib/queries";
 import {
   collaborationClient,
@@ -76,11 +77,17 @@ export default function EditorPage() {
   );
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [isEditorSynced, setIsEditorSynced] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<string>("javascript");
 
   const userId = authSession?.user?.id;
 
   const [endSessionMutation] = useMutation(END_SESSION, {
     client: collaborationClient,
+  });
+
+  const [updateLanguageMutation] = useMutation(UPDATE_SESSION_LANGUAGE, {
+    client: collaborationClient,
+    fetchPolicy: "no-cache",
   });
 
   // Fetch session with details
@@ -122,6 +129,13 @@ export default function EditorPage() {
   const matchUsers = usersData?.users || [];
   const currentUser = matchUsers.find((user: User) => user.id === userId);
   const currentUserName = currentUser?.name || "User";
+
+  // Initialize current language from session data
+  useEffect(() => {
+    if (data?.sessionWithDetails?.language) {
+      setCurrentLanguage(data.sessionWithDetails.language);
+    }
+  }, [data?.sessionWithDetails?.language]);
 
   //Extracting out explanations from the Examples
   const [explanations, setExplanations] = useState<string[]>([]);
@@ -243,6 +257,19 @@ export default function EditorPage() {
             currentlyOnline.add(state.userId);
           }
 
+          // Handle language changes from other users
+          if (
+            state.language &&
+            state.userId !== userId &&
+            state.languageChangeTimestamp
+          ) {
+            const changeAge = Date.now() - state.languageChangeTimestamp;
+            // Only process recent language changes (within last 2 seconds)
+            if (changeAge < 2000) {
+              setCurrentLanguage(state.language);
+            }
+          }
+
           // Handle session termination events
           const event = state.sessionEvent;
           if (
@@ -273,6 +300,25 @@ export default function EditorPage() {
       webSocketService?.destroy();
     };
   }, [sessionId, session, sessionError, userId]);
+
+  const handleLanguageChange = async (newLanguage: string) => {
+    if (!webSocketService) return;
+
+    try {
+      // Update local state immediately
+      setCurrentLanguage(newLanguage);
+
+      // Persist to database
+      await updateLanguageMutation({
+        variables: { sessionId, language: newLanguage },
+      });
+
+      // Broadcast to other user via awareness
+      webSocketService.broadcastLanguageChange(newLanguage);
+    } catch (error) {
+      console.error("Failed to update language:", error);
+    }
+  };
 
   const handleTerminateSession = async () => {
     if (!userId || !webSocketService) return;
@@ -552,9 +598,37 @@ export default function EditorPage() {
         <div className="flex-1 flex flex-col bg-gray-50 relative">
           {webSocketService && (
             <>
+              {/* Language Selector */}
+              <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center gap-3">
+                <label
+                  htmlFor="language-select"
+                  className="text-sm text-gray-300 font-medium"
+                >
+                  Language:
+                </label>
+                <select
+                  id="language-select"
+                  value={currentLanguage}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!isEditorSynced}
+                >
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="python">Python</option>
+                  <option value="java">Java</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                  <option value="go">Go</option>
+                  <option value="rust">Rust</option>
+                  <option value="ruby">Ruby</option>
+                  <option value="php">PHP</option>
+                </select>
+              </div>
               <Editor
-                height={"100%"}
-                defaultLanguage={sessionData.language}
+                key={sessionId}
+                height={"calc(100% - 44px)"}
+                language={currentLanguage}
                 defaultValue={sessionData.code}
                 webSocketService={webSocketService}
                 onSyncComplete={() => setIsEditorSynced(true)}

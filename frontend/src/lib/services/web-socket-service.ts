@@ -134,6 +134,16 @@ export class WebSocketService {
     });
   }
 
+  public broadcastLanguageChange(language: string) {
+    // Broadcast language change through awareness
+    const currentState = this.provider.awareness.getLocalState() || {};
+    this.setLocalState({
+      ...currentState,
+      language: language,
+      languageChangeTimestamp: Date.now(),
+    });
+  }
+
   public getCurrentCode(): string {
     // Get current code from Y.js document
     return this.document.getText("monaco").toString();
