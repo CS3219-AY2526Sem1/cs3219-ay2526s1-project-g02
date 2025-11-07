@@ -2,6 +2,13 @@ import { PubSub } from "@google-cloud/pubsub";
 import { SessionEventPayload, TOPICS } from "@noclue/common";
 import { createClient } from "@supabase/supabase-js";
 
+// ==== How to run this test ====
+// 1. Ensure matching service is running locally somehow
+// 2. Export the below 5 env variables in a terminal
+// 3. Insert a valid match id below
+// 4. Have gcp-pubsub-key.json in the root
+// 5. npx ts-node <dir-to-this-file>
+
 const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const EMULATOR_HOST = process.env.PUBSUB_EMULATOR_HOST;
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
@@ -59,10 +66,10 @@ async function testSessionExpiredFlow() {
 
         const newStatus = data?.status;
 
-        if (newStatus === 'expired') {
+        if (newStatus === 'ended') {
              console.log(`Success! Match status updated to: **${newStatus}**`);
         } else if (newStatus) {
-             console.log(`Test Failed! Match status is **${newStatus}**, expected 'expired'.`);
+             console.log(`Test Failed! Match status is **${newStatus}**, expected 'ended'.`);
         } else {
              console.log('Test Failed! Match not found or status is NULL.');
         }
