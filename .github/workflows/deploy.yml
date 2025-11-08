@@ -153,8 +153,8 @@ jobs:
 
     - name: Setup Pub/Sub Topics and Subscriptions
       run: |
-        npm install -g ts-node
-        npm run setup:pubsub
+        npm install -g tsx
+        npx tsx scripts/setup-pubsub.ts
       env:
         GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
