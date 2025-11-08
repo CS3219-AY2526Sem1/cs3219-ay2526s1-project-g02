@@ -190,8 +190,7 @@ export const IS_USERNAME_TAKEN = `
   }
 `;
 
-
-export const MY_USERNAME_QUERY = `
+export const MY_USERNAME_QUERY = gql`
   query MyUsername($id: String!) {
     myUsername(id: $id)
   }
@@ -316,4 +315,27 @@ export const GET_SUGGESTED_SOLUTIONS = gql`
     }
 
   }
+`;
+
+// Matching queries and mutations
+export const FIND_MATCH_MUTATION = gql`
+    mutation FindMatch($input: MatchRequestInput!) {
+        findMatch(request: $input) {
+            matchFound
+            matchedUserId
+            queued
+            queueKey
+            requestId
+            reason
+        }
+    }
+`;
+
+export const CANCEL_MATCH_MUTATION = gql`
+    mutation CancelMatch($input: CancelMatchRequestInput!) {
+        cancelMatchRequest(request: $input) {
+            success
+            reason
+        }
+    }
 `;
