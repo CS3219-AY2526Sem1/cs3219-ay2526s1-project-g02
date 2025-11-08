@@ -789,7 +789,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
     });
 
     // Scenario D2: Handle session ended event
-    it("should handle session end event and update database", async () => {
+    it("should handle session end event and update database tables", async () => {
         testLogger.log("SCENARIO D2");
 
         // Arrange: Prepare mock event data
@@ -803,19 +803,34 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Act: Trigger event handler
         await service.handleSessionEvent(mockSessionEvent);
 
-        // Assert: Verify DB update called correctly
-        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
-        expect(databaseMock.getClient().update).toHaveBeenCalledWith(
+        // 2 Database updates expected: one for 'matches', one for 'sessions'
+        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(2); 
+
+        // Assert: Verify DB update on 'matches' called correctly
+        expect(databaseMock.getClient().from).toHaveBeenCalledWith('matches');
+        expect(databaseMock.getClient().update).toHaveBeenNthCalledWith(1,
             expect.objectContaining({ 
                 status: 'ended',
                 ended_at: expect.any(String),
             })
         );
         expect(databaseMock.getClient().eq).toHaveBeenCalledWith('id', mockMatchId);
+
+        // Assert: Verify DB update on 'sessions' called correctly
+        expect(databaseMock.getClient().from).toHaveBeenCalledWith('sessions'); // Second call to from
+        expect(databaseMock.getClient().update).toHaveBeenNthCalledWith(2,
+            expect.objectContaining({ 
+                status: 'ended',
+                end_at: expect.any(String),
+            })
+        );
+        expect(databaseMock.getClient().eq).toHaveBeenCalledWith('match_id', mockMatchId);
+        // We expect 2 calls to eq: once for id (match), once for match_id (session)
+        expect(databaseMock.getClient().eq).toHaveBeenCalledTimes(2);
     });
 
     // Scenario D3: Handle session expired event
-    it("should handle session expired event and update database", async () => {
+    it("should handle session expired event and update database tables", async () => {
         testLogger.log("SCENARIO D3");
 
         // Arrange: Prepare mock event data
@@ -829,15 +844,30 @@ describe('(D) MatchingService: Match End Event Handling', () => {
         // Act: Trigger event handler
         await service.handleSessionEvent(mockSessionEvent);
 
-        // Assert: Verify DB update called correctly
-        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(1);
-        expect(databaseMock.getClient().update).toHaveBeenCalledWith(
+        // 2 Database updates expected: one for 'matches', one for 'sessions'
+        expect(databaseMock.getClient().update).toHaveBeenCalledTimes(2); 
+
+        // Assert: Verify DB update on 'matches' called correctly
+        expect(databaseMock.getClient().from).toHaveBeenCalledWith('matches');
+        expect(databaseMock.getClient().update).toHaveBeenNthCalledWith(1,
             expect.objectContaining({ 
                 status: 'ended',
                 ended_at: expect.any(String),
             })
         );
         expect(databaseMock.getClient().eq).toHaveBeenCalledWith('id', mockMatchId);
+
+        // Assert: Verify DB update on 'sessions' called correctly
+        expect(databaseMock.getClient().from).toHaveBeenCalledWith('sessions'); // Second call to from
+        expect(databaseMock.getClient().update).toHaveBeenNthCalledWith(2,
+            expect.objectContaining({ 
+                status: 'ended',
+                end_at: expect.any(String),
+            })
+        );
+        expect(databaseMock.getClient().eq).toHaveBeenCalledWith('match_id', mockMatchId);
+        // We expect 2 calls to eq: once for id (match), once for match_id (session)
+        expect(databaseMock.getClient().eq).toHaveBeenCalledTimes(2);
     });
 
     // Scenario D4: Handle session started event
