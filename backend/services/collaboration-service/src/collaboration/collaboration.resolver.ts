@@ -58,4 +58,12 @@ export class CollaborationResolver {
   async endSession(@Args('sessionId') sessionId: string) {
     return this.collaborationService.endSession(sessionId);
   }
+
+  @Mutation(() => SessionType)
+  async updateSessionLanguage(
+    @Args('sessionId') sessionId: string,
+    @Args('language') language: string,
+  ) {
+    return this.collaborationService.updateLanguage(sessionId, language);
+  }
 }

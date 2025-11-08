@@ -1,3 +1,4 @@
+import { register } from "module";
 import { Difficulty, QueueMember } from "src/utils/types";
 import { getQueueKey } from "src/utils/utils";
 
@@ -6,6 +7,8 @@ const mockQueueData: Map<string, string[]> = new Map();
 
 export const mockMatchingGateway = {
     notifyMatchFound: jest.fn(),
+    notifyRequestExpired: jest.fn(),
+    notifySessionStarted: jest.fn(),
 };
 
 export const mockRedisService = {

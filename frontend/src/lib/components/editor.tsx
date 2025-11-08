@@ -10,42 +10,67 @@ interface EditorProps {
   height: string;
   webSocketService: WebSocketService;
   width?: string;
-  defaultLanguage: string;
+  language: string;
   defaultValue?: string;
+  onSyncComplete?: () => void;
 }
 
 export default function Editor({
   height = "100vh",
   width = "100%",
-  defaultLanguage = "javascript",
+  language = "javascript",
   defaultValue = "",
   webSocketService,
+  onSyncComplete,
 }: EditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [binding, setBinding] = useState<MonacoBinding | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState(language);
+  const initialLanguage = useRef(language);
 
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
+  const handleEditorDidMount: OnMount = async (editor, monaco) => {
     if (!editor) throw new Error("Editor not found");
     if (!webSocketService) throw new Error("WebSocket service not provided");
 
+    // Store ref immediately
     editorRef.current = editor;
 
     // Clean up existing binding before creating new one
     binding?.destroy();
 
+    // Connect and wait for initial sync
     webSocketService.connect();
+    await webSocketService.waitForSync();
+
+    // Now bind after sync completes
     const newBinding = webSocketService.bindToEditor(editor);
     if (!newBinding) throw new Error("Failed to bind to editor");
 
     setBinding(newBinding);
+
+    // Notify parent that sync is complete
+    onSyncComplete?.();
   };
+
+  // Update Monaco Editor language when language prop changes
+  useEffect(() => {
+    if (editorRef.current && language !== currentLanguage) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        const monaco = (window as any).monaco;
+        if (monaco) {
+          monaco.editor.setModelLanguage(model, language);
+          setCurrentLanguage(language);
+        }
+      }
+    }
+  }, [language, currentLanguage]);
 
   return (
     <MonacoEditor
       height={height}
       width={width}
-      defaultLanguage={defaultLanguage}
-      defaultValue={defaultValue}
+      defaultLanguage={initialLanguage.current}
       theme="vs-dark"
       onMount={handleEditorDidMount}
       options={{

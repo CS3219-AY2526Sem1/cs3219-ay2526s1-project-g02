@@ -35,6 +35,7 @@ kubectl get events -n noclue-app | grep -i pull
 ```
 
 **Fix**:
+
 ```bash
 # Scale down other services
 kubectl scale deployment/frontend --replicas=1 -n noclue-app
@@ -58,6 +59,7 @@ kubectl logs -f POD_NAME -n noclue-app
 **Common causes**:
 
 1. **Missing environment variables**
+
 ```bash
 # Check secrets exist
 kubectl get secrets -n noclue-app
@@ -72,6 +74,7 @@ kubectl get secret supabase-secrets -n noclue-app -o json | jq '.data | keys'
 ```
 
 **Fix**:
+
 ```bash
 # Recreate secret
 kubectl delete secret supabase-secrets -n noclue-app
@@ -86,6 +89,7 @@ kubectl rollout restart deployment/user-service -n noclue-app
 ```
 
 2. **Health check failures**
+
 ```bash
 # Check health endpoint
 kubectl exec -n noclue-app deployment/user-service -- curl -v http://localhost:4001/health
@@ -95,14 +99,16 @@ kubectl exec -n noclue-app deployment/user-service -- curl -v http://localhost:4
 ```
 
 **Fix**: Add health endpoint to service:
+
 ```typescript
 // src/main.ts or src/index.ts
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'user-service' });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "user-service" });
 });
 ```
 
 3. **Database connection errors**
+
 ```bash
 # Test Supabase connectivity
 kubectl exec -n noclue-app deployment/user-service -- \
@@ -123,6 +129,7 @@ kubectl get events -n noclue-app | grep POD_NAME
 ```
 
 **Fix**:
+
 ```bash
 # Increase probe delays
 kubectl edit deployment user-service -n noclue-app
@@ -148,6 +155,7 @@ gcloud container images list-tags gcr.io/$GCP_PROJECT_ID/user-service
 ```
 
 **Fix**:
+
 ```bash
 # Fix 1: Update image path in deployment
 kubectl edit deployment user-service -n noclue-app
@@ -175,6 +183,7 @@ kubectl get pods -n noclue-app -o jsonpath='{.items[*].spec.containers[*].image}
 ```
 
 **Fix**:
+
 ```bash
 # Force update
 kubectl set image deployment/user-service \
@@ -200,6 +209,7 @@ kubectl get svc -n noclue-app
 ```
 
 **Fix**:
+
 ```bash
 # Check frontend environment variables
 kubectl exec deployment/frontend -n noclue-app -- env | grep SERVICE_URL
@@ -227,6 +237,7 @@ kubectl exec -it deployment/matching-service -n noclue-app -- \
 ```
 
 **Fix**:
+
 ```bash
 # Verify service selector matches pod labels
 kubectl get svc user-service -n noclue-app -o yaml | grep selector
@@ -248,6 +259,7 @@ kubectl describe svc frontend-service -n noclue-app
 ```
 
 **Fix**:
+
 ```bash
 # Wait 2-3 minutes for GCP to provision
 kubectl get svc frontend-service -n noclue-app -w
@@ -273,6 +285,7 @@ gcloud projects get-iam-policy $GCP_PROJECT_ID \
 ```
 
 **Fix**:
+
 ```bash
 # Re-add permissions
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
@@ -317,6 +330,7 @@ kubectl top pods -n noclue-app
 ```
 
 **Fix**:
+
 ```bash
 # Increase memory limits
 kubectl edit deployment user-service -n noclue-app
@@ -340,6 +354,7 @@ kubectl top nodes
 ```
 
 **Fix**:
+
 ```bash
 # Increase CPU limits
 kubectl edit deployment user-service -n noclue-app
@@ -370,6 +385,7 @@ kubectl exec deployment/user-service -n noclue-app -- env | grep CORS
 ```
 
 **Fix**:
+
 ```bash
 # Update CORS origin
 kubectl set env deployment/user-service \
@@ -393,14 +409,15 @@ kubectl logs -f deployment/matching-service -n noclue-app
 ```
 
 **Fix**:
+
 ```yaml
 # Ensure WebSocket services use LoadBalancer
 # Edit k8s/matching-service-service.yaml:
 spec:
   type: LoadBalancer
   ports:
-  - port: 4003
-    targetPort: 4003
+    - port: 4003
+      targetPort: 4003
 ```
 
 ## CI/CD Issues
@@ -408,6 +425,7 @@ spec:
 ### GitHub Actions Fails
 
 **Check workflow logs**:
+
 1. Go to GitHub > Actions
 2. Click failed workflow
 3. Expand failed step
@@ -439,6 +457,7 @@ kubectl get events -n noclue-app --sort-by='.lastTimestamp' | tail -20
 ```
 
 **Fix**:
+
 ```bash
 # Cancel bad rollout
 kubectl rollout undo deployment/user-service -n noclue-app
@@ -464,6 +483,7 @@ kubectl get secret supabase-secrets -n noclue-app \
 ```
 
 **Fix**:
+
 ```bash
 # Verify Supabase project is running
 # Check: https://supabase.com/dashboard

@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 
 // Question queries
 export const GET_QUESTIONS = gql`
@@ -113,8 +113,23 @@ export const GET_QUESTIONS_BY_DIFFICULTY = gql`
   }
 `;
 
+export const GET_TESTCASES_FOR_QUESTION = gql`
+  query GetTestCasesForQuestion($questionId: ID!) {
+    testCasesForQuestion(questionId: $questionId) {
+      id
+      questionId
+      input
+      expectedOutput
+      isHidden
+      orderIndex
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 // User queries and mutations
-export const REGISTER = /* GraphQL */ `
+export const REGISTER = gql`
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
       message
@@ -122,7 +137,7 @@ export const REGISTER = /* GraphQL */ `
   }
 `;
 
-export const LOGIN_MUTATION = `
+export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       access_token
@@ -132,7 +147,7 @@ export const LOGIN_MUTATION = `
   }
 `;
 
-export const DELETE_ACCOUNT_WITH_INPUT = `
+export const DELETE_ACCOUNT_WITH_INPUT = gql`
   mutation DeleteAccount($input: DeleteAccountInput!) {
     deleteAccount(input: $input) {
       message
@@ -140,30 +155,29 @@ export const DELETE_ACCOUNT_WITH_INPUT = `
   }
 `;
 
-export const VERIFY_PASSWORD = `
+export const VERIFY_PASSWORD = gql`
   mutation Verify($input: VerifyPasswordInput!) {
     verifyPassword(input: $input)
   }
 `;
 
-export const UPDATE_PASSWORD = `
+export const UPDATE_PASSWORD = gql`
   mutation UpdatePassword($input: UpdatePasswordInput!) {
-    updatePassword(input: $input){
-    }
-    message
-  }
-`;
-
-export const RESET_PASSWORD_LINK = `
-  mutation ResetPasswordLink($input: ResetPasswordInput!) {
-    resetPasswordLink(input: $input) {
-
+    updatePassword(input: $input) {
       message
     }
   }
 `;
 
-export const IS_EMAIL_TAKEN = `
+export const RESET_PASSWORD_LINK = gql`
+  mutation ResetPasswordLink($input: ResetPasswordInput!) {
+    resetPasswordLink(input: $input) {
+      message
+    }
+  }
+`;
+
+export const IS_EMAIL_TAKEN = gql`
   query IsEmailTaken($email: String!) {
     isEmailTaken(email: $email)
   }
@@ -172,6 +186,20 @@ export const IS_EMAIL_TAKEN = `
 export const IS_USERNAME_TAKEN = gql`
   query IsUsernameTaken($username: String!) {
     isUsernameTaken(username: $username)
+  }
+`;
+
+export const MY_USERNAME_QUERY = gql`
+  query MyUsername($id: String!) {
+    myUsername(id: $id)
+  }
+`;
+
+export const UPDATE_MY_USERNAME = gql`
+  mutation UpdateMyUsername($id: String!, $username: String!) {
+    updateMyUsername(id: $id, username: $username) {
+      message
+    }
   }
 `;
 
@@ -243,6 +271,15 @@ export const END_SESSION = gql`
   }
 `;
 
+export const UPDATE_SESSION_LANGUAGE = gql`
+  mutation UpdateSessionLanguage($sessionId: String!, $language: String!) {
+    updateSessionLanguage(sessionId: $sessionId, language: $language) {
+      id
+      language
+    }
+  }
+`;
+
 export const GET_QUESTION_ATTEMPTS = gql`
   query GetQuestionAttempts($userId: ID!) {
     questionAttemptsByUser(userId: $userId) {
@@ -276,5 +313,29 @@ export const GET_SUGGESTED_SOLUTIONS = gql`
       createdAt
       updatedAt
     }
+
   }
+`;
+
+// Matching queries and mutations
+export const FIND_MATCH_MUTATION = gql`
+    mutation FindMatch($input: MatchRequestInput!) {
+        findMatch(request: $input) {
+            matchFound
+            matchedUserId
+            queued
+            queueKey
+            requestId
+            reason
+        }
+    }
+`;
+
+export const CANCEL_MATCH_MUTATION = gql`
+    mutation CancelMatch($input: CancelMatchRequestInput!) {
+        cancelMatchRequest(request: $input) {
+            success
+            reason
+        }
+    }
 `;

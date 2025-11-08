@@ -15,6 +15,8 @@ export class WebSocketService {
   private provider: WebsocketProvider;
   private binding: MonacoBinding | null = null;
   private document: Y.Doc;
+  private isSynced: boolean = false;
+  
   constructor(url: string, sessionId: string) {
     this.document = this.createDocument();
     this.provider = new WebsocketProvider(url, sessionId, this.document);
@@ -48,7 +50,27 @@ export class WebSocketService {
 
   public onSync(callback: (isSynced: boolean) => void) {
     this.provider.on("sync", (isSynced: boolean) => {
+      if (isSynced) {
+        this.isSynced = true;
+      }
       callback(isSynced);
+    });
+  }
+
+  public waitForSync(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.isSynced) {
+        resolve();
+        return;
+      }
+      const handler = (synced: boolean) => {
+        if (synced) {
+          this.isSynced = true;
+          this.provider.off("sync", handler);
+          resolve();
+        }
+      };
+      this.provider.on("sync", handler);
     });
   }
 
@@ -109,6 +131,16 @@ export class WebSocketService {
         ...event,
         timestamp: Date.now(),
       },
+    });
+  }
+
+  public broadcastLanguageChange(language: string) {
+    // Broadcast language change through awareness
+    const currentState = this.provider.awareness.getLocalState() || {};
+    this.setLocalState({
+      ...currentState,
+      language: language,
+      languageChangeTimestamp: Date.now(),
     });
   }
 

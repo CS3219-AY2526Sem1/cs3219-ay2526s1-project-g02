@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key';
-
+// Support both variable names for compatibility
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key';
+console.log('Supabase Config:', { url: supabaseUrl, key: supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'missing' });
 export const supabase = createClient(
   supabaseUrl,
   supabaseKey,
