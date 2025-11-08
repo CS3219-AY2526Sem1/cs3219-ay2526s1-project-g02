@@ -127,13 +127,29 @@ jobs:
         ./scripts/setup-gke.sh
 
     # Setup Pub/Sub authentication and topics
-    - name: Setup Pub/Sub Authentication
+    - name: Setup Pub/Sub Secrets in Kubernetes
       run: |
-        chmod +x ./scripts/setup-pubsub-auth.sh
-        ./scripts/setup-pubsub-auth.sh
+        # Create the secret from GitHub Secrets (key was created manually)
+        echo '${{ secrets.GCP_PUBSUB_KEY }}' > pubsub-service-key.json
+        
+        # Create Kubernetes secret
+        kubectl create secret generic pubsub-key \
+          --from-file=key.json=pubsub-service-key.json \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Create ConfigMap
+        kubectl create configmap pubsub-config \
+          --from-literal=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Clean up the key file
+        rm -f pubsub-service-key.json
+        
+        echo "✅ Pub/Sub credentials configured in Kubernetes"
       env:
         GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-        NAMESPACE: ${{ env.NAMESPACE }}
 
     - name: Setup Pub/Sub Topics and Subscriptions
       run: |
