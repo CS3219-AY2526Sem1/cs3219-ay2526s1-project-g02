@@ -25,6 +25,7 @@ import { PageLayout } from "@/components/layout";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { matchingSocket, SessionStartedData } from "@/lib/socket/socket";
+import { SelectionStatusModal } from "@/components/SelectionStatusModal";
 
 interface Question {
   id: string;
@@ -80,6 +81,9 @@ export function QuestionSelectionClient() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const hasNavigatedRef = useRef(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalStatus, setModalStatus] = useState<"waiting" | "complete" | "timeout">("waiting");
+  const timeoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     data: selectionData,
@@ -233,17 +237,8 @@ export function QuestionSelectionClient() {
         return;
       }
 
-      hasNavigatedRef.current = true;
-
       stopSessionPolling?.();
       stopPolling?.();
-
-      try {
-        router.push(`/editor/${payload.sessionId}`);
-      } catch (error) {
-        hasNavigatedRef.current = false;
-        console.error("Failed to navigate to collaborative editor:", error);
-      }
     };
 
     matchingSocket.on("sessionStarted", handleSessionStarted);
@@ -263,8 +258,25 @@ export function QuestionSelectionClient() {
       false;
     if (alreadySubmitted) {
       setHasSubmitted(true);
+      
+      // Show waiting modal if user has submitted but selection not complete
+      if (selectionStatus?.status === "PENDING") {
+        setShowModal(true);
+        setModalStatus("waiting");
+        
+        // Start timeout timer (60 seconds)
+        if (!timeoutTimerRef.current) {
+          timeoutTimerRef.current = setTimeout(() => {
+            setModalStatus("timeout");
+            // Auto-redirect after showing timeout message
+            setTimeout(() => {
+              router.push("/matching");
+            }, 3000);
+          }, 60000); // 60 seconds timeout
+        }
+      }
     }
-  }, [selectionStatus, activeUserId]);
+  }, [selectionStatus, activeUserId, router]);
 
   useEffect(() => {
     setHasSubmitted(false);
@@ -277,6 +289,16 @@ export function QuestionSelectionClient() {
         selectionStatus.status === "ALREADY_ASSIGNED")
     ) {
       stopPolling?.();
+      
+      // Clear any existing timeout
+      if (timeoutTimerRef.current) {
+        clearTimeout(timeoutTimerRef.current);
+        timeoutTimerRef.current = null;
+      }
+      
+      // Show modal with final question
+      setShowModal(true);
+      setModalStatus("complete");
       setIsCreatingSession(true);
     }
   }, [selectionStatus?.status, stopPolling]);
@@ -294,19 +316,29 @@ export function QuestionSelectionClient() {
 
   const sessionId = sessionByMatchData?.sessionByMatch?.id ?? null;
 
-  useEffect(() => {
-    if (sessionId && !hasNavigatedRef.current) {
-      hasNavigatedRef.current = true;
-      stopSessionPolling?.();
-      router.push(`/editor/${sessionId}`);
-    }
-  }, [sessionId, router, stopSessionPolling]);
+  // Removed automatic navigation - user must click button in modal
+  // useEffect(() => {
+  //   if (sessionId && !hasNavigatedRef.current) {
+  //     hasNavigatedRef.current = true;
+  //     stopSessionPolling?.();
+  //     router.push(`/editor/${sessionId}`);
+  //   }
+  // }, [sessionId, router, stopSessionPolling]);
 
   useEffect(() => {
     if (finalQuestionId) {
       setSelectedQuestion(finalQuestionId);
     }
   }, [finalQuestionId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutTimerRef.current) {
+        clearTimeout(timeoutTimerRef.current);
+      }
+    };
+  }, []);
 
   if (authLoading || questionsLoading) {
     return (
@@ -338,37 +370,6 @@ export function QuestionSelectionClient() {
       <PageLayout header={<NavBar />}>
         <div className="flex flex-col items-center justify-center gap-4 py-12">
           <div className="text-red-600">Error: {questionsError.message}</div>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  // Show loading screen when creating session
-  if (isCreatingSession) {
-    return (
-      <PageLayout header={<NavBar />}>
-        <div className="w-full mx-auto pt-20 pb-32 px-6">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 border border-white/50 shadow-lg text-center">
-              <div className="mb-6">
-                <div className="w-20 h-20 mx-auto bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
-                  <svg className="w-10 h-10 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-              </div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-3">
-                Creating Your Session
-              </h2>
-              <p className="text-lg text-slate-600 mb-4">
-                Setting up the collaborative environment...
-              </p>
-              <p className="text-sm text-slate-500">
-                You'll be redirected to the editor shortly
-              </p>
-            </div>
-          </div>
         </div>
       </PageLayout>
     );
@@ -416,8 +417,27 @@ export function QuestionSelectionClient() {
     }
   };
 
+  const handleNavigateToSession = () => {
+    if (sessionId && !hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
+      setShowModal(false);
+      stopSessionPolling?.();
+      router.push(`/editor/${sessionId}`);
+    }
+  };
+
   return (
     <PageLayout header={<NavBar />}>
+      {/* Selection Status Modal */}
+      {showModal && (
+        <SelectionStatusModal
+          status={modalStatus}
+          finalQuestion={selectionStatus?.finalQuestion}
+          onNavigate={handleNavigateToSession}
+          timeoutMessage="Your partner didn't make a selection in time. Returning to matching page..."
+        />
+      )}
+      
       <div className="w-full mx-auto pt-12 pb-32 px-6">
         <div className="max-w-5xl mx-auto">
           {/* Header Section */}

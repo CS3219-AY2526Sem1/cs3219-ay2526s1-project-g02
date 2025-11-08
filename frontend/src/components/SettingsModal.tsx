@@ -29,8 +29,8 @@ export default function SettingsModal({
 }) {
 
   const [activeTab, setActiveTab] = useState<
-    "update" | "delete" | "get" | "changepw"
-  >("get");
+    "update" | "delete" | "changepw"
+  >("update");
 
 
   const { session } = useAuth();
