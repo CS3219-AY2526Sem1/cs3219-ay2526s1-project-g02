@@ -1,9 +1,9 @@
 import { DIFFICULTIES, PROGRAMMING_LANGUAGES } from "@/constants/constants";
 import { MatchStatus } from "@/constants/types";
-import { matchingClient } from "@/lib/apollo-client";
-import { CANCEL_MATCH_MUTATION, FIND_MATCH_MUTATION } from "@/lib/graphql/matching-mutations";
+import { matchingClient, userClient } from "@/lib/apollo-client";
+import { CANCEL_MATCH_MUTATION, FIND_MATCH_MUTATION, MY_USERNAME_QUERY } from "@/lib/queries";
 import { MatchFoundData, matchingSocket, RequestExpiredData } from "@/lib/socket/socket";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { MatchRequestInput, MatchResultOutput } from "@noclue/common";
 import { useEffect, useMemo, useState } from "react";
 
@@ -20,6 +20,7 @@ export function useMatchingLogic(session: any) {
     const [status, setStatus] = useState<MatchStatus>("IDLE");
     const [matchResult, setMatchResult] = useState<MatchResultOutput | null>(null); // sync
     const [finalMatchData, setFinalMatchData] = useState<MatchFoundData | null>(null); // async
+    const [matchedUsername, setMatchedUsername] = useState<string | null>(null);
     const [formLanguage, setFormLanguage] = useState<string>(PROGRAMMING_LANGUAGES[0]);
     const [formTopics, setFormTopics] = useState<string[]>([]);
     const [formDifficulty, setFormDifficulty] = useState<string>(DIFFICULTIES[0]);
@@ -116,6 +117,9 @@ export function useMatchingLogic(session: any) {
     // 3. Initial Socket.IO Connection
     useEffect(() => {
         if (!ACTIVE_USER_ID) {
+            if (matchingSocket.connected) matchingSocket.disconnect();
+            setSocketStatus("disconnected");
+            console.log("Socket: Disconnected due to missing User ID.");
             return;
         }
 
@@ -134,7 +138,6 @@ export function useMatchingLogic(session: any) {
         return () => {
             matchingSocket.off("connect", onConnect);
             matchingSocket.off("disconnect", onDisconnect);
-            if (matchingSocket.connected) matchingSocket.disconnect();
         };
     }, [ACTIVE_USER_ID]);
 
@@ -176,29 +179,61 @@ export function useMatchingLogic(session: any) {
         };
     }, [status, matchResult]);
 
-    // 5a. Helper for language selection
+    // 5. Fetch matched user's username when finalMatchData updates
+    useEffect(() => {
+        const matchedUserId = finalMatchData?.matchedUserId;
+
+        if (!matchedUserId) {
+            setMatchedUsername(null);
+            return;
+        }
+
+        const fetchUserName = async () => {
+            try {
+                const { data } = await userClient.query({
+                    query: MY_USERNAME_QUERY,
+                    variables: { id: matchedUserId },
+                    fetchPolicy: 'network-only', 
+                });
+
+                if (data?.myUsername) {
+                    setMatchedUsername(`@${data.myUsername}`); 
+                } else {
+                    setMatchedUsername(`@user`);
+                }
+            } catch (error) {
+                console.error("Failed to fetch matched user username:", error);
+                setMatchedUsername("Error fetching name");
+            }
+        };
+
+        fetchUserName();
+
+    }, [finalMatchData, userClient]);
+
+    // 6a. Helper for language selection
     const handleSetFormLanguage = (value: string) => {
         if (!isFormDisabled) setFormLanguage(value);
     };
 
-    // 5b. Helper for topics selection
+    // 6b. Helper for topics selection
     const handleSetFormTopics = (value: string[]) => {
         if (!isFormDisabled) setFormTopics(value);
     };
 
-    // 5c. Helper for difficulty selection
+    // 6c. Helper for difficulty selection
     const handleSetFormDifficulty = (value: string) => {
         if (!isFormDisabled) setFormDifficulty(value);
     };
 
-    // 6. UI State
+    // 7. UI State
     const isFormDisabled = useMemo(() => status === "LOADING" || status === "QUEUED" || status === "MATCH_FOUND", [status]);
     const isReadyState = useMemo(() => status === "IDLE" || status === "REQUEST_EXPIRED" || status === "CANCELLED" || status === "ERROR", [status]);
     const buttonDisabledForStart = useMemo(() => formTopics.length === 0 || loading || canceling, [formTopics.length, loading, canceling]);
     
     return {
         // state
-        status, loading, canceling, notification, matchResult, finalMatchData, socketStatus,
+        status, loading, canceling, notification, matchResult, finalMatchData, socketStatus, matchedUsername,
         // form state
         formLanguage, formTopics, formDifficulty,
         // handlers
