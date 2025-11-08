@@ -116,6 +116,9 @@ export function useMatchingLogic(session: any) {
     // 3. Initial Socket.IO Connection
     useEffect(() => {
         if (!ACTIVE_USER_ID) {
+            if (matchingSocket.connected) matchingSocket.disconnect();
+            setSocketStatus("disconnected");
+            console.log("Socket: Disconnected due to missing User ID.");
             return;
         }
 
@@ -134,7 +137,6 @@ export function useMatchingLogic(session: any) {
         return () => {
             matchingSocket.off("connect", onConnect);
             matchingSocket.off("disconnect", onDisconnect);
-            if (matchingSocket.connected) matchingSocket.disconnect();
         };
     }, [ACTIVE_USER_ID]);
 

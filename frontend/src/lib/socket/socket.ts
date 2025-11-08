@@ -25,8 +25,8 @@ interface ServerToClientEvents {
     sessionStarted: (data: SessionStartedData) => void;
 }
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_MATCHING_WS_URL || 'http://localhost:4003';
-const SOCKET_NAMESPACE = process.env.NEXT_PUBLIC_MATCHING_WS_NAMESPACE || 'match';
+const SOCKET_URL = process.env.NEXT_PUBLIC_MATCHING_SERVICE_URL || 'http://localhost:4003';
+const SOCKET_NAMESPACE = 'match';
 const FULL_SOCKET_URL = `${SOCKET_URL}/${SOCKET_NAMESPACE}`;
 
 export const matchingSocket: Socket<ServerToClientEvents> = io(FULL_SOCKET_URL, {
