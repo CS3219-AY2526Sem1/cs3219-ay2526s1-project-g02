@@ -573,16 +573,16 @@ export default function EditorPage() {
                         );
                       })}
                     </div>
-                    <div className="flex mt-6">
+                    <div className="flex mt-6 gap-2">
                       <button
                         onClick={() => router.push("/")}
-                        className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                        className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
                       >
                         Back
                       </button>
                       <button
                         onClick={() => setShowTerminateModal(true)}
-                        className="pb-4 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
                       >
                         Terminate Session
                       </button>

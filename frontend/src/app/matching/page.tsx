@@ -65,7 +65,7 @@ export default function MatchingPage() {
                 {/* New Header Section */}
                 <header className="mb-8">
                     <h1 className="flex items-center text-3xl font-extrabold text-gray-900 mb-2">
-                        <UserSearch className="w-8 h-8 mr-3 text-blue-500" />
+                        <UserSearch className="w-8 h-8 mr-2 text-blue-500" strokeWidth={3}/>
                         Find a Coding Partner
                     </h1>
                     <p className="text-gray-500">
