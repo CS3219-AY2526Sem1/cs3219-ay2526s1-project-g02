@@ -31,7 +31,7 @@ export default function MatchingFooter({ status, socketStatus, matchResult }: Ma
     return (
         <div className="mt-8 pt-4 border-t border-gray-300 text-xs flex justify-between items-center">
             {/* Primary Match Status (Bottom-Left) */}
-            <div className="font-medium text-gray-600">
+            <div className="font-medium text-gray-500">
                 Match Status:
                 <span className={`ml-1 font-extrabold ${getStatusTextColor(status)}`}>
                     {status}

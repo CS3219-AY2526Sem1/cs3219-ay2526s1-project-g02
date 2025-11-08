@@ -37,9 +37,9 @@ export default function MatchingActionButton({
                 onClick={handleStartMatch}
                 variant="primary"
                 disabled={buttonDisabledForStart}
-                className="w-full text-lg shadow-xl"
+                className="w-full transition-all duration-200 text-lg shadow-xl"
             >
-                {loading ? "Submitting Request..." : "Find Match"}
+                {loading ? "Submitting Request..." : "Find a Match"}
             </Button>
         );
     }

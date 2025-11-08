@@ -19,6 +19,8 @@ export default function MatchingFormFields({
     handleSetFormTopics,
     handleSetFormDifficulty,
 }: MatchingFormFieldsProps) {
+
+    // Helper to toggle topic selection
     const toggleTopic = (topic: string) => {
         const newTopics = formTopics.includes(topic)
             ? formTopics.filter((t) => t !== topic)
@@ -33,21 +35,22 @@ export default function MatchingFormFields({
             >
             {/* Programming Language selection */}
             <div className="mb-6">
-                <label className="block text-lg font-medium text-gray-800 mb-1">
-                    1. Select Programming Language
+                <label className="block text-xl font-bold text-gray-800 mb-1">
+                    <span className="text-blue-600 mr-2">1.</span>
+                    Select Programming Language
                 </label>
                 <select
-                id="language-select"
-                value={formLanguage}
-                onChange={(e) => handleSetFormLanguage(e.target.value)}
-                className={`w-full appearance-none border border-gray-300 bg-white rounded-xl py-3 px-4 shadow-md 
-                            transition duration-150 ease-in-out focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none 
-                            text-gray-800 cursor-pointer
-                            ${
-                            isFormDisabled
-                                ? "bg-gray-200 cursor-not-allowed"
-                                : ""
-                            }`}
+                    id="language-select"
+                    value={formLanguage}
+                    onChange={(e) => handleSetFormLanguage(e.target.value)}
+                    className={`w-full appearance-none border border-gray-300 bg-white rounded-xl py-3 px-4 shadow-md 
+                                transition duration-150 ease-in-out focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none 
+                                text-gray-800 text-lg cursor-pointer
+                                ${
+                                isFormDisabled
+                                    ? "bg-gray-200 cursor-not-allowed"
+                                    : ""
+                                }`}
                 >
                     {PROGRAMMING_LANGUAGES.map((lang) => (
                         <option key={lang} value={lang}>
@@ -59,8 +62,9 @@ export default function MatchingFormFields({
 
             {/* 2. Topics selection */}
             <div className="mb-6">
-                <label className="block text-lg font-medium text-gray-800 mb-2">
-                2. Topics (Select one or more)
+                <label className="block text-xl font-bold text-gray-800 mb-2">
+                    <span className="text-blue-600 mr-2">2.</span>
+                    Topics (Select one or more)
                 </label>
                 <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-300 rounded-xl shadow-sm">
                     {PROGRAMMING_TOPICS.map((topic) => (
@@ -69,17 +73,13 @@ export default function MatchingFormFields({
                             onClick={() => toggleTopic(topic)}
                             type="button"
                             disabled={isFormDisabled}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 
+                            className={`px-4 py-1.5 text-base font-medium rounded-full transition-all duration-200 
                                         ${
                                         formTopics.includes(topic)
-                                            ? "bg-blue-500 text-white shadow-md"
-                                            : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300"
+                                            ? "bg-blue-500 text-white shadow-lg"
+                                            : "bg-slate-100 text-slate-700 hover:bg-slate-300 border border-slate-300"
                                         }
-                                        ${
-                                        isFormDisabled
-                                            ? "cursor-not-allowed"
-                                            : ""
-                                        }`}
+                                        ${isFormDisabled ? "cursor-not-allowed" : ""}`}
                             >
                             {topic}
                         </button>
@@ -94,30 +94,31 @@ export default function MatchingFormFields({
 
             {/* Difficulty selection */}
             <div className="mb-6">
-                <label className="block text-lg font-medium text-gray-800 mb-2">
-                3. Select Difficulty Level
+                <label className="block text-xl font-bold text-gray-800 mb-2">
+                    <span className="text-blue-600 mr-2">3.</span>
+                    Select Difficulty Level
                 </label>
-                <div className="flex space-x-3 p-3 bg-white border border-gray-300 rounded-xl shadow-sm">
-                {DIFFICULTIES.map((diff) => (
-                    <button
-                    key={diff}
-                    onClick={() => handleSetFormDifficulty(diff)}
-                    type="button"
-                    className={`flex-1 py-3 text-base font-semibold rounded-lg transition-all duration-200 border-2
-                                            ${
-                                            diff === formDifficulty
-                                                ? "bg-blue-500 text-white shadow-md border-blue-500"
-                                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                            }
-                                            ${
-                                            isFormDisabled
-                                                ? "cursor-not-allowed"
-                                                : ""
-                                            }`}
-                    >
-                    {diff}
-                    </button>
-                ))}
+                <div className="flex gap-3 p-3 bg-white border border-gray-300 rounded-xl shadow-sm">
+                    {DIFFICULTIES.map((diff) => (
+                        <button
+                            key={diff}
+                            onClick={() => handleSetFormDifficulty(diff)}
+                            type="button"
+                            className={`flex-1 py-3 text-lg font-semibold rounded-lg transition-all duration-200 border-2
+                                        ${
+                                        diff === formDifficulty
+                                            ? "bg-blue-500 text-white shadow-lg border-blue-500"
+                                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                        }
+                                        ${
+                                        isFormDisabled
+                                            ? "cursor-not-allowed"
+                                            : ""
+                                        }`}
+                            >
+                            {diff}
+                        </button>
+                    ))}
                 </div>
             </div>
         </fieldset>

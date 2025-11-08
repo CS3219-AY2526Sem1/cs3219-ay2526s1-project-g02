@@ -9,6 +9,7 @@ import NavBar from "@/components/NavBar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Loading } from "@/components/ui";
 import { useMatchingLogic } from "@/hooks/useMatchingLogic";
+import { HeartHandshake, Link, Users, UserSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function MatchingPage() {
@@ -54,12 +55,23 @@ export default function MatchingPage() {
 
     return (
         <PageLayout header={<NavBar></NavBar>}>
-            <div className="bg-gray-100 w-full mx-auto rounded-xl p-8 shadow-xl">
+            <div className="flex flex-col gap-2 w-4/5 xl:max-w-5xl mx-auto p-8">
                 {/* Notification Banner with Dismiss Button */}
                 <MatchingNotification
                     notification={notification}
                     dismissNotification={dismissNotification}
                 />
+
+                {/* New Header Section */}
+                <header className="mb-8">
+                    <h1 className="flex items-center text-3xl font-extrabold text-gray-900 mb-2">
+                        <UserSearch className="w-8 h-8 mr-3 text-blue-500" />
+                        Find a Coding Partner
+                    </h1>
+                    <p className="text-gray-500">
+                        Choose your preferences below to be matched with a peer.
+                    </p>
+                </header>
 
                 {/* Matching Form */}
                 <MatchingFormFields 
