@@ -12,6 +12,7 @@ interface MatchingActionButtonProps {
     buttonDisabledForStart: boolean;
     matchResult: MatchResultOutput | null;
     finalMatchData: MatchFoundData | null;
+    matchedUsername: string | null;
     handleStartMatch: () => void;
     handleCancelMatch: () => void;
 }
@@ -19,7 +20,7 @@ interface MatchingActionButtonProps {
 export default function MatchingActionButton({
     status, loading, canceling,
     isReadyState, buttonDisabledForStart,
-    matchResult, finalMatchData,
+    matchResult, finalMatchData, matchedUsername,
     handleStartMatch, handleCancelMatch,
 }: MatchingActionButtonProps) {
     const router = useRouter();
@@ -62,13 +63,13 @@ export default function MatchingActionButton({
     }
 
     if (status === "MATCH_FOUND") {
-        const matchedUser = finalMatchData?.matchedUserId || matchResult?.matchedUserId || "a partner";
+        const matchedUserId = finalMatchData?.matchedUserId || matchResult?.matchedUserId || "a partner";
         const isSessionReady = !!finalMatchData?.matchId;
         
         return (
             <div className="flex flex-col items-center justify-between space-y-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-md">
                 <span className="text-green-700 font-semibold mb-2">
-                    Success! Matched with **{matchedUser}**
+                    Success! Matched with {`${matchedUsername} (${matchedUserId.substring(0, 8)}...)`}
                 </span>
                 <Button
                     onClick={goToSession}

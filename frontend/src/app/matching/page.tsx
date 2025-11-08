@@ -17,7 +17,7 @@ export default function MatchingPage() {
     const { session, loading: authLoading } = useAuth();
     const {
         // state
-        status, loading, canceling, notification, matchResult, finalMatchData, socketStatus,
+        status, loading, canceling, notification, matchResult, finalMatchData, socketStatus, matchedUsername,
         // form state
         formLanguage, formTopics, formDifficulty,
         // handlers
@@ -93,6 +93,7 @@ export default function MatchingPage() {
                     buttonDisabledForStart={buttonDisabledForStart}
                     matchResult={matchResult}
                     finalMatchData={finalMatchData}
+                    matchedUsername={matchedUsername}
                     handleStartMatch={handleStartMatch}
                     handleCancelMatch={handleCancelMatch}
                 />
