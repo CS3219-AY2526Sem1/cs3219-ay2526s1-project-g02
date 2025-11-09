@@ -1,8 +1,9 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 export const SUPABASE = Symbol("SUPABASE");
 
+@Global()
 @Module({
   providers: [
     {
