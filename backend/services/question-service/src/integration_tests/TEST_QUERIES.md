@@ -5,10 +5,22 @@ Run these in the GraphQL Playground at `http://localhost:4002/graphql`
 
 ## Prerequisites
 
-1. Start the Question Service from the root folder: `npm run dev:question`
-2. Ensure database tables are created (see `database-schema.md`)
-3. Populate with test data (see `setup.md`)
-4. Open GraphQL Playground: `http://localhost:4002/graphql`
+1. **Set up Supabase Database**:
+   - Go to your Supabase project SQL Editor
+   - Run the complete setup script from `createTestData.sql`
+   - This creates tables, indexes, triggers, and populates 10 sample questions with test cases
+
+2. **Configure Environment Variables**:
+   - Create `.env` file in `backend/services/question-service/`
+   - Add `SUPABASE_URL` and `SUPABASE_KEY` from your Supabase project settings
+
+3. **Start the Question Service**:
+   - From project root: `npm run dev:question`
+   - Service runs on `http://localhost:4002`
+
+4. **Open GraphQL Playground**: 
+   - Navigate to `http://localhost:4002/graphql`
+   - Use the interactive playground to test queries
 
 ---
 
