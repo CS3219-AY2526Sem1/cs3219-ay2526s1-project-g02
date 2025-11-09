@@ -52,15 +52,7 @@ jobs:
     - name: Configure Docker for GCR
       run: gcloud auth configure-docker
 
-    # Build and push Docker images
-    - name: Build and Push Frontend
-      run: |
-        docker build -f Dockerfile.frontend \
-          -t gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA \
-          -t gcr.io/$GCP_PROJECT_ID/frontend:latest .
-        docker push gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA
-        docker push gcr.io/$GCP_PROJECT_ID/frontend:latest
-
+    # Build and push Docker images (backend services first)
     - name: Build and Push User Service
       run: |
         docker build -f Dockerfile.user-service \
@@ -162,13 +154,56 @@ jobs:
         chmod +x ./scripts/deploy-services.sh
         ./scripts/deploy-services.sh
 
-    # Update frontend with backend LoadBalancer URLs
-    - name: Update Frontend URLs
+    # Wait for backend LoadBalancer IPs to be assigned
+    - name: Wait for LoadBalancer IPs
       run: |
-        chmod +x ./scripts/update-frontend-urls.sh
-        ./scripts/update-frontend-urls.sh
-      env:
-        NAMESPACE: ${{ env.NAMESPACE }}
+        echo "⏳ Waiting for LoadBalancer IPs to be assigned..."
+        sleep 60
+        
+        # Get backend service IPs
+        USER_IP=$(kubectl get service user-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        QUESTION_IP=$(kubectl get service question-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        MATCHING_IP=$(kubectl get service matching-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        COLLAB_IP=$(kubectl get service collaboration-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        LLM_IP=$(kubectl get service llm-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        
+        echo "Backend LoadBalancer IPs:"
+        echo "  User: $USER_IP"
+        echo "  Question: $QUESTION_IP"
+        echo "  Matching: $MATCHING_IP"
+        echo "  Collaboration: $COLLAB_IP"
+        echo "  LLM: $LLM_IP"
+        
+        # Export for next steps
+        echo "USER_SERVICE_IP=$USER_IP" >> $GITHUB_ENV
+        echo "QUESTION_SERVICE_IP=$QUESTION_IP" >> $GITHUB_ENV
+        echo "MATCHING_SERVICE_IP=$MATCHING_IP" >> $GITHUB_ENV
+        echo "COLLABORATION_SERVICE_IP=$COLLAB_IP" >> $GITHUB_ENV
+        echo "LLM_SERVICE_IP=$LLM_IP" >> $GITHUB_ENV
+
+    # Build and push frontend with backend URLs
+    - name: Build and Push Frontend
+      run: |
+        docker build -f Dockerfile.frontend \
+          --build-arg NEXT_PUBLIC_USER_GRAPHQL_URL="http://$USER_SERVICE_IP:4001/graphql" \
+          --build-arg NEXT_PUBLIC_QUESTION_GRAPHQL_URL="http://$QUESTION_SERVICE_IP:4002/graphql" \
+          --build-arg NEXT_PUBLIC_MATCHING_GRAPHQL_URL="http://$MATCHING_SERVICE_IP:4003/graphql" \
+          --build-arg NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL="http://$COLLABORATION_SERVICE_IP:4004/graphql" \
+          --build-arg NEXT_PUBLIC_LLM_SERVICE_URL="http://$LLM_SERVICE_IP:4005" \
+          --build-arg NEXT_PUBLIC_MATCHING_SERVICE_URL="http://$MATCHING_SERVICE_IP:4003" \
+          --build-arg NEXT_PUBLIC_GRAPHQL_URL="http://$USER_SERVICE_IP:4001/graphql" \
+          --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+          --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" \
+          -t gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA \
+          -t gcr.io/$GCP_PROJECT_ID/frontend:latest .
+        docker push gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA
+        docker push gcr.io/$GCP_PROJECT_ID/frontend:latest
+
+    # Deploy frontend with new image
+    - name: Deploy Frontend
+      run: |
+        kubectl rollout restart deployment/frontend -n $NAMESPACE
+        kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=300s
 
     # Get service URLs
     - name: Get Service URLs
