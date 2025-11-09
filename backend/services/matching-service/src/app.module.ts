@@ -5,6 +5,8 @@ import { MatchingModule } from './matching/matching.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -31,5 +33,7 @@ import { DatabaseModule } from './database/database.module';
     // Application Modules
     MatchingModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

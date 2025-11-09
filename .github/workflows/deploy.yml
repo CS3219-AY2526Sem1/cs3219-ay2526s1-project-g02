@@ -93,6 +93,14 @@ jobs:
         docker push gcr.io/$GCP_PROJECT_ID/collaboration-service:$GITHUB_SHA
         docker push gcr.io/$GCP_PROJECT_ID/collaboration-service:latest
 
+    - name: Build and Push LLM Service
+      run: |
+        docker build -f Dockerfile.llm-service \
+          -t gcr.io/$GCP_PROJECT_ID/llm-service:$GITHUB_SHA \
+          -t gcr.io/$GCP_PROJECT_ID/llm-service:latest .
+        docker push gcr.io/$GCP_PROJECT_ID/llm-service:$GITHUB_SHA
+        docker push gcr.io/$GCP_PROJECT_ID/llm-service:latest
+
     # Get GKE credentials
     - name: Get GKE credentials
       run: |
@@ -110,6 +118,38 @@ jobs:
       run: |
         chmod +x ./scripts/setup-gke.sh
         ./scripts/setup-gke.sh
+
+    # Setup Pub/Sub authentication and topics
+    - name: Setup Pub/Sub Secrets in Kubernetes
+      run: |
+        # Create the secret from GitHub Secrets (key was created manually)
+        echo '${{ secrets.GCP_PUBSUB_KEY }}' > pubsub-service-key.json
+        
+        # Create Kubernetes secret
+        kubectl create secret generic pubsub-key \
+          --from-file=key.json=pubsub-service-key.json \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Create ConfigMap
+        kubectl create configmap pubsub-config \
+          --from-literal=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Clean up the key file
+        rm -f pubsub-service-key.json
+        
+        echo "✅ Pub/Sub credentials configured in Kubernetes"
+      env:
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Setup Pub/Sub Topics and Subscriptions
+      run: |
+        npm install -g tsx
+        npx tsx scripts/setup-pubsub.ts
+      env:
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
     # Deploy services with secrets from GitHub Secrets
     - name: Deploy Services

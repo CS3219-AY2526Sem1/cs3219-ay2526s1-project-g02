@@ -62,3 +62,4 @@ lerna-debug.log*
 .claude/
 .documentation/
 supabase/.env.docker.local
+pubsub-service-key.json

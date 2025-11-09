@@ -776,6 +776,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
 
         // Reset specific Supabase mock implementations for this suite
         databaseMock.getClient().from.mockReturnThis();
+        databaseMock.getClient().select.mockReturnThis();
         databaseMock.getClient().update.mockReturnThis();
         databaseMock.getClient().eq.mockReturnThis();
         databaseMock.getClient().select.mockReturnThis();
@@ -874,7 +875,7 @@ describe('(D) MatchingService: Match End Event Handling', () => {
     it("should handle session started event, update DB status, and notify users", async () => {
         testLogger.log("SCENARIO D4");
 
-        // Arrange: Prepare mock event data
+        // Arrange: Prepare mock event data and mock DB response
         const mockSessionEvent: SessionEventPayload = {
             matchId: mockMatchId,
             sessionId: 'session-123',

@@ -112,9 +112,16 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
 1. **Google Cloud Project**
    - Create a GCP project
    - Enable the Pub/Sub API
-   - Create a service account with Pub/Sub Admin role (for production)
+   - Configure authentication (see detailed guide below)
 
-2. **Environment Variables**
+2. **Authentication Setup**
+
+   For production deployment, see the comprehensive guide:
+   - **[Pub/Sub Authentication Setup Guide](./PUBSUB_AUTH_SETUP.md)** - Complete production setup with two methods:
+     - Service Account Key (Quick setup)
+     - Workload Identity (Recommended for production)
+
+3. **Environment Variables**
 
    Add the following to your `.env` file:
 
@@ -122,10 +129,10 @@ The application uses Google Cloud Pub/Sub for asynchronous communication between
    # Required
    GCP_PROJECT_ID=your-gcp-project-id
 
-   # Optional: For production with service account
+   # For production with service account key
    GCP_KEY_FILENAME=/path/to/service-account-key.json
 
-   # Optional: For local development with emulator
+   # For local development with emulator
    PUBSUB_EMULATOR_HOST=localhost:8085
    ```
 

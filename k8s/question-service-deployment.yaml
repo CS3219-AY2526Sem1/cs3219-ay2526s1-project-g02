@@ -27,6 +27,8 @@ spec:
         envFrom:
         - secretRef:
             name: supabase-secrets
+        - configMapRef:
+            name: pubsub-config
         env:
         - name: PORT
           value: "4002"
@@ -46,14 +48,23 @@ spec:
         - name: CORS_ORIGIN
           value: "https://noclue.com"
         - name: GCP_PROJECT_ID
-          value: "noclue-476404"
+          valueFrom:
+            configMapKeyRef:
+              name: pubsub-config
+              key: GCP_PROJECT_ID
+        - name: GCP_KEY_FILENAME
+          value: "/etc/gcp/key.json"
+        volumeMounts:
+        - name: gcp-key
+          mountPath: /etc/gcp
+          readOnly: true
         resources:
           requests:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           httpGet:
             path: /health
@@ -66,7 +77,11 @@ spec:
           httpGet:
             path: /health
             port: 4002
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+      volumes:
+      - name: gcp-key
+        secret:
+          secretName: pubsub-key
