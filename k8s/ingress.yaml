@@ -1,0 +1,94 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: noclue-ingress
+  namespace: noclue-app
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    # Enable CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    # Increase timeout for WebSocket connections
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  rules:
+  - http:
+      paths:
+      # User Service
+      - path: /api/user
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 4001
+      
+      # Question Service
+      - path: /api/question
+        pathType: Prefix
+        backend:
+          service:
+            name: question-service
+            port:
+              number: 4002
+      
+      # Matching Service
+      - path: /api/matching
+        pathType: Prefix
+        backend:
+          service:
+            name: matching-service
+            port:
+              number: 4003
+      
+      # Collaboration Service
+      - path: /api/collaboration
+        pathType: Prefix
+        backend:
+          service:
+            name: collaboration-service
+            port:
+              number: 4004
+      
+      # LLM Service
+      - path: /api/llm
+        pathType: Prefix
+        backend:
+          service:
+            name: llm-service
+            port:
+              number: 4005
+      
+      # Frontend (catch-all for root paths)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+---
+# Separate ingress for WebSocket support (Collaboration Yjs)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: noclue-websocket-ingress
+  namespace: noclue-app
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    nginx.ingress.kubernetes.io/websocket-services: "collaboration-service"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /ws/collaboration
+        pathType: Prefix
+        backend:
+          service:
+            name: collaboration-service
+            port:
+              number: 1234
+

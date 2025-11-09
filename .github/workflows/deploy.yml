@@ -162,6 +162,14 @@ jobs:
         chmod +x ./scripts/deploy-services.sh
         ./scripts/deploy-services.sh
 
+    # Update frontend with backend LoadBalancer URLs
+    - name: Update Frontend URLs
+      run: |
+        chmod +x ./scripts/update-frontend-urls.sh
+        ./scripts/update-frontend-urls.sh
+      env:
+        NAMESPACE: ${{ env.NAMESPACE }}
+
     # Get service URLs
     - name: Get Service URLs
       run: |

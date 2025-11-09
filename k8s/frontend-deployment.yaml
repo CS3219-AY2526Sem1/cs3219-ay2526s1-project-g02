@@ -25,22 +25,43 @@ spec:
           value: "3000"
         - name: NODE_ENV
           value: "production"
-        # Backend service URLs (using external LoadBalancer IPs)
+        # Backend service URLs (from ConfigMap - auto-updated)
         - name: NEXT_PUBLIC_USER_GRAPHQL_URL
-          value: "http://34.67.192.126:4001/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: USER_SERVICE_URL
         - name: NEXT_PUBLIC_QUESTION_GRAPHQL_URL
-          value: "http://34.16.114.117:4002/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: QUESTION_SERVICE_URL
         - name: NEXT_PUBLIC_MATCHING_GRAPHQL_URL
-          value: "http://34.123.68.82:4003/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: MATCHING_SERVICE_URL
         - name: NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL
-          value: "http://104.198.77.205:4004/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: COLLABORATION_SERVICE_URL
         - name: NEXT_PUBLIC_LLM_SERVICE_URL
-          value: "http://34.121.74.235:4005"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: LLM_SERVICE_URL
         - name: NEXT_PUBLIC_MATCHING_SERVICE_URL
-          value: "http://34.123.68.82:4003"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: MATCHING_WS_URL
         # Legacy fallback
         - name: NEXT_PUBLIC_GRAPHQL_URL
-          value: "http://34.67.192.126:4001/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: USER_SERVICE_URL
         # Supabase
         - name: NEXT_PUBLIC_SUPABASE_URL
           valueFrom:
