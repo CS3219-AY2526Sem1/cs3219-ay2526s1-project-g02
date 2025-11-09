@@ -7,10 +7,12 @@ import {
   Res,
   Sse,
   MessageEvent,
+  Inject,
 } from "@nestjs/common";
 import { Response } from "express";
 import { Observable } from "rxjs";
 import { LlmService } from "./llm.service";
+import { LLM_SERVICE } from "./llm.module";
 import {
   QuestionExplanationRequestDto,
   ChatRequestDto,
@@ -18,7 +20,9 @@ import {
 
 @Controller('llm')
 export class LlmController {
-  constructor(private readonly llmService: LlmService) {}
+  constructor(
+    @Inject(LLM_SERVICE) private readonly llmService: LlmService
+  ) {}
 
   /**
    * POST /llm/explain-question

@@ -27,16 +27,24 @@ spec:
           envFrom:
           - secretRef:
               name: supabase-secrets
+          - configMapRef:
+              name: pubsub-config
           env:
             - name: PORT
               value: "4005"
             - name: NODE_ENV
               value: "production"
-            - name: OPENAI_API_KEY
+            - name: LLM_PROVIDER
+              value: "vertex"
+            - name: GCP_PROJECT_ID
               valueFrom:
-                secretKeyRef:
-                  name: supabase-secrets
-                  key: OPENAI_API_KEY
+                configMapKeyRef:
+                  name: pubsub-config
+                  key: GCP_PROJECT_ID
+            - name: GCP_LOCATION
+              value: "us-central1"
+            - name: GCP_KEY_FILENAME
+              value: "/etc/gcp/key.json"
             - name: SUPABASE_KEY
               valueFrom:
                 secretKeyRef:
@@ -52,6 +60,10 @@ spec:
               value: "http://collaboration-service.noclue-app.svc.cluster.local:4004"
             - name: CORS_ORIGIN
               value: "https://noclue.com"
+          volumeMounts:
+          - name: gcp-key
+            mountPath: /etc/gcp
+            readOnly: true
           resources:
             requests:
               memory: "256Mi"
@@ -71,8 +83,12 @@ spec:
             httpGet:
               path: /health
               port: 4005
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+      volumes:
+      - name: gcp-key
+        secret:
+          secretName: pubsub-key
 
