@@ -11,7 +11,22 @@ metadata:
     # Increase timeout for WebSocket connections
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # SSL/TLS Configuration
+    # Use Google-managed certificate (requires domain)
+    networking.gke.io/managed-certificates: "noclue-ssl-cert"
+    # OR use self-signed cert (uncomment if using self-signed)
+    # ingress.gcp.kubernetes.io/pre-shared-cert: "noclue-tls-secret"
+    # HTTP to HTTPS redirect
+    kubernetes.io/ingress.allow-http: "true"
+    networking.gke.io/v1beta1.FrontendConfig: "frontend-config"
 spec:
+  # TLS configuration
+  tls:
+  - secretName: noclue-tls-secret  # Used for self-signed certs
+    # hosts:  # Uncomment and add when using domain names
+    #   - noclue.yourdomain.com
+    #   - www.noclue.yourdomain.com
+    #   - api.noclue.yourdomain.com
   rules:
   - http:
       paths:

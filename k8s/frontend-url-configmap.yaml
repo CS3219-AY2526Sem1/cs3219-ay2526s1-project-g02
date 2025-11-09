@@ -1,0 +1,14 @@
+# ConfigMap for frontend URL
+# This is used by backend services to generate correct redirect URLs for Supabase
+# Update this after deployment with the actual LoadBalancer IP or domain
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-url-config
+  namespace: noclue-app
+data:
+  # Default value - update this after getting LoadBalancer IP
+  # For production with domain: https://yourdomain.com
+  # For development with IP: http://YOUR_LOADBALANCER_IP
+  FRONTEND_URL: "http://localhost:3000"
+

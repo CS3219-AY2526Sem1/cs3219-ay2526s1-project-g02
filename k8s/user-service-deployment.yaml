@@ -48,6 +48,12 @@ spec:
           value: "http://matching-service.noclue-app.svc.cluster.local:4003"
         - name: COLLABORATION_SERVICE_URL
           value: "http://collaboration-service.noclue-app.svc.cluster.local:4004"
+        - name: FRONTEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-url-config
+              key: FRONTEND_URL
+              optional: true
         - name: CORS_ORIGIN
           value: "*"
         resources:

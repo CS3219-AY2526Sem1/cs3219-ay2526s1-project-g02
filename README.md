@@ -5,6 +5,8 @@ Microservices-based coding platform with Next.js frontend and NestJS backend, de
 ## Quick Links
 
 - [Setup Guide](./docs/SETUP.md) - First-time deployment and local development
+- [**Fix Supabase Redirects**](./docs/QUICK_FIX_SUPABASE.md) - ⚡ Fix email confirmation redirects (5 min)
+- [Supabase Redirect URLs](./docs/SUPABASE_REDIRECTS.md) - Complete guide for auth redirects
 - [Question Service](backend/services/question-service/README.md) - Complete API & SQL setup
 - [Pub/Sub Integration](./docs/PUBSUB_INTEGRATION.md) - Microservices messaging
 - [Attempt History](docs/ATTEMPT_HISTORY_IMPLEMENTATION.md) - User attempt tracking

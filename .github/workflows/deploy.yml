@@ -143,6 +143,22 @@ jobs:
       env:
         GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
+    # Create frontend URL ConfigMap
+    - name: Create Frontend URL ConfigMap
+      run: |
+        # Use custom domain if set, otherwise will be updated after getting LoadBalancer IP
+        SITE_URL="${{ secrets.SITE_URL }}"
+        if [[ -z "$SITE_URL" ]]; then
+          SITE_URL="http://localhost:3000"  # Placeholder, will be updated later
+        fi
+        
+        kubectl create configmap frontend-url-config \
+          --from-literal=FRONTEND_URL="$SITE_URL" \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        echo "✅ Frontend URL ConfigMap created with: $SITE_URL"
+
     # Deploy services with secrets from GitHub Secrets
     - name: Deploy Services
       env:
@@ -181,9 +197,32 @@ jobs:
         echo "COLLABORATION_SERVICE_IP=$COLLAB_IP" >> $GITHUB_ENV
         echo "LLM_SERVICE_IP=$LLM_IP" >> $GITHUB_ENV
 
+    # Get frontend LoadBalancer IP for SITE_URL
+    - name: Get Frontend LoadBalancer IP
+      run: |
+        FRONTEND_IP=$(kubectl get service frontend-service -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
+        if [[ -z "$FRONTEND_IP" ]]; then
+          echo "⚠️ Frontend IP not yet assigned, using placeholder"
+          FRONTEND_IP="PENDING"
+        fi
+        echo "FRONTEND_IP=$FRONTEND_IP" >> $GITHUB_ENV
+        echo "Frontend IP: $FRONTEND_IP"
+
     # Build and push frontend with backend URLs
     - name: Build and Push Frontend
       run: |
+        # Determine site URL - use custom domain if set, otherwise use LoadBalancer IP
+        SITE_URL="${{ secrets.SITE_URL }}"
+        if [[ -z "$SITE_URL" ]]; then
+          if [[ "$FRONTEND_IP" != "PENDING" ]]; then
+            SITE_URL="http://$FRONTEND_IP"
+          else
+            SITE_URL="http://localhost:3000"
+          fi
+        fi
+        
+        echo "Building frontend with SITE_URL: $SITE_URL"
+        
         docker build -f Dockerfile.frontend \
           --build-arg NEXT_PUBLIC_USER_GRAPHQL_URL="http://$USER_SERVICE_IP:4001/graphql" \
           --build-arg NEXT_PUBLIC_QUESTION_GRAPHQL_URL="http://$QUESTION_SERVICE_IP:4002/graphql" \
@@ -194,6 +233,7 @@ jobs:
           --build-arg NEXT_PUBLIC_GRAPHQL_URL="http://$USER_SERVICE_IP:4001/graphql" \
           --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
           --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}" \
+          --build-arg NEXT_PUBLIC_SITE_URL="$SITE_URL" \
           -t gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA \
           -t gcr.io/$GCP_PROJECT_ID/frontend:latest .
         docker push gcr.io/$GCP_PROJECT_ID/frontend:$GITHUB_SHA
@@ -204,6 +244,32 @@ jobs:
       run: |
         kubectl rollout restart deployment/frontend -n $NAMESPACE
         kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=300s
+
+    # Update Frontend URL ConfigMap with actual LoadBalancer IP
+    - name: Update Frontend URL ConfigMap
+      run: |
+        # Use custom domain if set, otherwise use the LoadBalancer IP
+        SITE_URL="${{ secrets.SITE_URL }}"
+        if [[ -z "$SITE_URL" ]]; then
+          if [[ "$FRONTEND_IP" != "PENDING" ]]; then
+            SITE_URL="http://$FRONTEND_IP"
+          else
+            echo "⚠️ Frontend IP still pending, skipping ConfigMap update"
+            exit 0
+          fi
+        fi
+        
+        echo "Updating Frontend URL ConfigMap to: $SITE_URL"
+        
+        kubectl create configmap frontend-url-config \
+          --from-literal=FRONTEND_URL="$SITE_URL" \
+          -n ${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Restart user-service to pick up the new ConfigMap value
+        kubectl rollout restart deployment/user-service -n ${{ env.NAMESPACE }}
+        
+        echo "✅ Frontend URL ConfigMap updated and user-service restarted"
 
     # Get service URLs
     - name: Get Service URLs

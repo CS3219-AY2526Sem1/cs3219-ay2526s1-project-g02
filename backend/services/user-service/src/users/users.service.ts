@@ -12,12 +12,19 @@ export class UsersService {
 
   async register(email: string, username: string, password: string) {
     console.log("📩 REGISTER DTO:", { email, username, password });
+    
+    // Get the frontend URL for email confirmation redirects
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    
     const {
       data: { user },
       error,
     } = await this.supabase.auth.signUp({
       email: email,
       password: password,
+      options: {
+        emailRedirectTo: `${frontendUrl}/auth/callback`,
+      },
     });
 
     console.log("USER", user, "ERROR", error);
@@ -59,8 +66,11 @@ export class UsersService {
 
   async resetPasswordLink(email: string) {
     try {
+      // Get the frontend URL for password reset redirects
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      
       await this.supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "http://localhost:3000/update-password",
+        redirectTo: `${frontendUrl}/update-password`,
       });
       return { message: "Reset password email sent" };
     } catch (error) {

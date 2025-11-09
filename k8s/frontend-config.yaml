@@ -1,0 +1,23 @@
+# FrontendConfig for HTTP to HTTPS redirect
+# This configures the GCE load balancer to redirect HTTP to HTTPS
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: frontend-config
+  namespace: noclue-app
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: "MOVED_PERMANENTLY_DEFAULT"  # 301 redirect
+  sslPolicy: noclue-ssl-policy
+---
+# SSL Policy for secure TLS configuration
+apiVersion: networking.gke.io/v1beta1
+kind: SSLPolicy
+metadata:
+  name: noclue-ssl-policy
+  namespace: noclue-app
+spec:
+  minTlsVersion: TLS_1_2
+  profile: MODERN  # Use modern ciphers only
+

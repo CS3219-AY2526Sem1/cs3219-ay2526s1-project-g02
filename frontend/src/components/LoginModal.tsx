@@ -116,10 +116,11 @@ export default function LoginModal() {
                 className="w-[45%] cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
                 onClick={async (e) => {
                   e.preventDefault();
+                  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
                   await supabase.auth.signInWithOAuth({
                     provider: "google",
                     options: {
-                      redirectTo: `http://localhost.com:3000/auth/callback`,
+                      redirectTo: `${siteUrl}/auth/callback`,
                     },
                   });
                 }}
@@ -136,10 +137,11 @@ export default function LoginModal() {
                 className="w-[45%] cursor-pointer  bg-gradient-to-r from-cyan-600 to-blue-600 text-white  font-semibold "
                 onClick={async (e) => {
                   e.preventDefault();
+                  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
                   await supabase.auth.signInWithOAuth({
                     provider: "github",
                     options: {
-                      redirectTo: `http://localhost.com:3000/auth/callback`,
+                      redirectTo: `${siteUrl}/auth/callback`,
                     },
                   });
                 }}

@@ -1,0 +1,31 @@
+# Google-managed SSL Certificate
+# This will automatically provision and renew SSL certificates
+# Note: Requires a domain name - update 'domains' field with your actual domain
+# If using IP address only, you'll need to use a self-signed cert instead
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: noclue-ssl-cert
+  namespace: noclue-app
+spec:
+  domains:
+    # TODO: Update with your actual domain names once you have them
+    # For now, this is a placeholder - certificate will fail until domains are set
+    # - noclue.yourdomain.com
+    # - www.noclue.yourdomain.com
+    # - api.noclue.yourdomain.com
+    - noclue-app.example.com  # Placeholder - replace with actual domain
+---
+# Alternative: Self-signed certificate for development/testing with IP
+# Uncomment and use this if you don't have a domain yet
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: noclue-tls-secret
+#   namespace: noclue-app
+# type: kubernetes.io/tls
+# data:
+#   # These are placeholder base64 values - generate real ones using the setup script
+#   tls.crt: LS0tLS1CRUdJTi...  # Base64 encoded certificate
+#   tls.key: LS0tLS1CRUdJTi...  # Base64 encoded private key
+
