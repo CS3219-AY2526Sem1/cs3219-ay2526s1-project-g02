@@ -13,10 +13,10 @@ async function bootstrap() {
     })
   );
   app.enableCors({
-    origin: ["http://localhost:3000"],
-
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-  }); // FE dev origin
+  });
   await app.listen(process.env.PORT ? Number(process.env.PORT) : 3001);
 }
 bootstrap();
