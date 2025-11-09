@@ -5,7 +5,8 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key';
 
 // Get the site URL - defaults to localhost in dev, should be set to production URL in prod
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+// This is used for OAuth and email redirects in auth method calls
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
   (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
 console.log('Supabase Config:', { 
@@ -22,8 +23,6 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true, // important for OAuth callback
-      // Set the redirect URL for email confirmations and password resets
-      redirectTo: `${siteUrl}/auth/callback`,
     },
   }
 );
