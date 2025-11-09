@@ -337,7 +337,153 @@ mutation DeleteTestQuestion {
 
 ---
 
-## Test 10: Error Handling
+## Test 10: Question Selection for Match
+
+**Purpose**: Verify manual question selection workflow
+
+### Test 10a: Get Questions for Match Selection
+
+```graphql
+query GetQuestionsForMatch {
+  questionsForMatchSelection(matchId: "REPLACE_WITH_MATCH_ID") {
+    id
+    title
+    difficulty
+    category
+  }
+}
+```
+
+**Success Criteria**:
+- ✅ Returns questions filtered by match criteria (difficulty + common topics)
+- ✅ Falls back to difficulty-only if no topic matches
+- ✅ Falls back to all questions if no difficulty matches
+
+### Test 10b: Submit Question Selection
+
+```graphql
+mutation SubmitSelection {
+  submitQuestionSelection(input: {
+    matchId: "REPLACE_WITH_MATCH_ID"
+    userId: "REPLACE_WITH_USER_ID"
+    questionId: "REPLACE_WITH_QUESTION_ID"
+  }) {
+    status
+    pendingUserIds
+    selections {
+      userId
+      questionId
+      isWinner
+      submittedAt
+      finalizedAt
+    }
+    finalQuestion {
+      id
+      title
+      difficulty
+    }
+  }
+}
+```
+
+**Success Criteria**:
+- ✅ First submission returns status: PENDING with pendingUserIds
+- ✅ Second submission returns status: COMPLETE with winner selected
+- ✅ Winner is randomly chosen from both submissions
+- ✅ If both select same question, that question is instantly assigned
+
+### Test 10c: Check Selection Status
+
+```graphql
+query SelectionStatus {
+  questionSelectionStatus(matchId: "REPLACE_WITH_MATCH_ID") {
+    status
+    pendingUserIds
+    selections {
+      userId
+      questionId
+      isWinner
+      submittedAt
+      finalizedAt
+    }
+    finalQuestion {
+      id
+      title
+    }
+  }
+}
+```
+
+**Success Criteria**:
+- ✅ Returns current status (PENDING/COMPLETE/ALREADY_ASSIGNED)
+- ✅ Shows which users have submitted
+- ✅ Shows final question once both submitted
+
+---
+
+## Test 11: Question Attempts (FR32)
+
+**Purpose**: Verify question attempt history tracking
+
+### Test 11a: Get User's Question Attempts
+
+```graphql
+query GetUserAttempts {
+  questionAttemptsByUser(userId: "REPLACE_WITH_USER_ID") {
+    id
+    userId
+    questionId
+    matchId
+    attemptedAt
+    createdAt
+    question {
+      id
+      title
+      description
+      difficulty
+      category
+    }
+  }
+}
+```
+
+**Success Criteria**:
+- ✅ Returns all attempts for the user
+- ✅ Includes enriched question details (title, difficulty, categories)
+- ✅ Ordered by attemptedAt DESC (most recent first)
+- ✅ Includes matchId for tracing back to collaboration sessions
+
+---
+
+## Test 12: Suggested Solutions
+
+**Purpose**: Verify suggested solutions can be retrieved
+
+```graphql
+query GetSuggestedSolutions {
+  suggestedSolutionsForQuestion(questionId: "REPLACE_WITH_QUESTION_ID") {
+    id
+    questionId
+    language
+    solutionCode
+    explanation
+    timeComplexity
+    spaceComplexity
+    approachName
+    createdAt
+    updatedAt
+  }
+}
+```
+
+**Success Criteria**:
+- ✅ Returns all suggested solutions for the question
+- ✅ Includes time/space complexity analysis
+- ✅ Includes approach name and explanation
+
+---
+
+## Test 13: Error Handling
 
 **Purpose**: Verify proper error handling
 
@@ -400,7 +546,12 @@ Run through all tests and check off when passing:
 - [ ] Test 7: Create Question
 - [ ] Test 8: Update Question
 - [ ] Test 9: Delete Question
-- [ ] Test 10: Error Handling
+- [ ] Test 10a: Get Questions for Match Selection
+- [ ] Test 10b: Submit Question Selection
+- [ ] Test 10c: Check Selection Status
+- [ ] Test 11: Get Question Attempts History
+- [ ] Test 12: Get Suggested Solutions
+- [ ] Test 13: Error Handling
 
 ---
 

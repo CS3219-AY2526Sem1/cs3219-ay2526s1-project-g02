@@ -78,32 +78,40 @@ The service will start on `http://localhost:4002`
 
 The Question Service sits between the Matching and Collaboration services in the event-driven flow:
 
-1. **MatchFound** message arrives from `matching-queue` (published by the Matching Service).  
-2. Depending on configuration, the Question Service either auto-assigns a question or waits for both users to submit a pick via GraphQL.  
-3. When both selections are in, the service picks a winner, updates `question_selections`, and publishes a `QuestionAssigned` payload to `question-queue`.  
-4. The Collaboration Service provisions the editor session and sends a `session_started` lifecycle event (with the new `sessionId`) back through Pub/Sub.
+1. **MatchFound** message arrives via Pub/Sub (published by the Matching Service)
+2. Question Service prepares question selection workflow
+3. Both users submit question picks via `submitQuestionSelection` mutation
+4. When both selections are in, the service randomly picks a winner
+5. Question Service publishes `QuestionAssigned` event to Pub/Sub
+6. Collaboration Service receives event and creates session
+7. Question attempts are automatically logged for both users
 
-Key GraphQL operations that back the manual selection flow:
-- `submitQuestionSelection(input: SubmitQuestionSelectionInput!)`
-- `questionSelectionStatus(matchId: ID!)`
+Key GraphQL operations:
+- `submitQuestionSelection(input: SubmitQuestionSelectionInput!)` - Submit user's question choice
+- `questionSelectionStatus(matchId: ID!)` - Poll selection status (PENDING/COMPLETE/ALREADY_ASSIGNED)
+- `questionsForMatchSelection(matchId: ID!)` - Get filtered questions for match criteria
 
 ### GraphQL API Overview
 
 The service exposes a GraphQL API with the following capabilities:
 
 **Queries:**
-- Retrieve all questions or filter by difficulty/category
-- Get single question by ID
-- Allocate random questions for sessions (with optional filters)
-- Get test cases for a question (JSON input/output format)
-- Query attempt history by user
-- Get suggested solutions for a question
-- Check question selection status for a match
+- `questions` - Get all questions
+- `question(id: String!)` - Get single question by ID
+- `questionsByDifficulty(difficulty: String!)` - Filter by difficulty (Easy/Medium/Hard)
+- `questionsByCategory(category: String!)` - Filter by category/topic
+- `questionsForMatchSelection(matchId: ID!)` - Get questions filtered by match criteria (3-tier fallback: difficulty+topics → difficulty → all)
+- `allocateQuestionsForSession(count: Number!, difficulty: String, categories: [String])` - Allocate K random questions with optional filters (FR17)
+- `testCasesForQuestion(questionId: ID!)` - Get all test cases for a question in JSON format (FR18)
+- `questionSelectionStatus(matchId: ID!)` - Get current selection status for a match
+- `questionAttemptsByUser(userId: ID!)` - Get question attempt history for a user (FR32 - NFR20)
+- `suggestedSolutionsForQuestion(questionId: ID!)` - Get suggested solutions for a question
 
 **Mutations:**
-- Create, update, and delete questions
-- Submit question selection for a match (both users pick, one wins)
-- Create test cases for questions
+- `createQuestion(input: CreateQuestionInput!)` - Create new question (FR17.1.1)
+- `updateQuestion(id: String!, input: UpdateQuestionInput!)` - Update question (FR17.1.2)
+- `deleteQuestion(id: String!)` - Delete question (FR17.1.2)
+- `submitQuestionSelection(input: SubmitQuestionSelectionInput!)` - Submit user's question selection for a match (manual selection flow)
 
 All GraphQL schemas, types, and field descriptions are available in the interactive playground at `http://localhost:4002/graphql`. The resolver code in `questions.resolver.ts` provides complete implementation details.
 

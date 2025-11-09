@@ -7,6 +7,19 @@
 -- SECTION 1: CREATE TABLES
 -- ============================================
 
+-- Matches table (required for foreign key references)
+-- NOTE: This may already exist if created by matching-service
+CREATE TABLE IF NOT EXISTS matches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user1_id UUID NOT NULL,
+  user2_id UUID NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  difficulty TEXT,
+  common_topics TEXT[],
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  ended_at TIMESTAMPTZ
+);
+
 -- Questions table
 CREATE TABLE IF NOT EXISTS questions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -64,14 +77,17 @@ CREATE TABLE IF NOT EXISTS question_attempts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
-  match_id UUID,
-  attempted_at TIMESTAMPTZ DEFAULT NOW()
+  match_id UUID REFERENCES matches(id) ON DELETE SET NULL,
+  attempted_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
 -- SECTION 2: CREATE INDEXES
 -- ============================================
 
+CREATE INDEX IF NOT EXISTS idx_matches_users ON matches(user1_id, user2_id);
+CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
 CREATE INDEX IF NOT EXISTS idx_questions_difficulty ON questions(difficulty);
 CREATE INDEX IF NOT EXISTS idx_questions_category ON questions USING GIN(category);
 CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC);
@@ -84,32 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_question_attempts_user_id ON question_attempts(us
 CREATE INDEX IF NOT EXISTS idx_question_attempts_question_id ON question_attempts(question_id);
 
 -- ============================================
--- SECTION 3: ENABLE RLS & CREATE POLICIES
--- ============================================
-
-ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE suggested_solutions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE question_attempts ENABLE ROW LEVEL SECURITY;
-
--- Questions: public read, service role manage
-CREATE POLICY "Public read questions" ON questions FOR SELECT USING (true);
-CREATE POLICY "Service manage questions" ON questions FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- Test cases: public read, service role manage
-CREATE POLICY "Public read test_cases" ON test_cases FOR SELECT USING (true);
-CREATE POLICY "Service manage test_cases" ON test_cases FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- Suggested solutions: public read, service role manage
-CREATE POLICY "Public read solutions" ON suggested_solutions FOR SELECT USING (true);
-CREATE POLICY "Service manage solutions" ON suggested_solutions FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- Question attempts: users see own, service role full access
-CREATE POLICY "Users view own attempts" ON question_attempts FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service manage attempts" ON question_attempts FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- ============================================
--- SECTION 4: CREATE TRIGGERS
+-- SECTION 3: CREATE TRIGGERS
 -- ============================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -128,7 +119,7 @@ CREATE TRIGGER update_suggested_solutions_updated_at BEFORE UPDATE ON suggested_
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
--- SECTION 5: INSERT SAMPLE QUESTIONS
+-- SECTION 4: INSERT SAMPLE QUESTIONS
 -- ============================================
 
 DO $$
@@ -256,7 +247,7 @@ VALUES (
 ) RETURNING id INTO longest_substring_id;
 
 -- ============================================
--- STEP 2: Insert Test Cases
+-- SECTION 5: INSERT TEST CASES
 -- ============================================
 
 -- Test cases for Two Sum
@@ -476,9 +467,11 @@ END $$;
 -- ============================================
 
 SELECT 
+  (SELECT COUNT(*) FROM matches) as total_matches,
   (SELECT COUNT(*) FROM questions) as total_questions,
   (SELECT COUNT(*) FROM test_cases) as total_test_cases,
-  (SELECT COUNT(*) FROM suggested_solutions) as total_solutions;
+  (SELECT COUNT(*) FROM suggested_solutions) as total_solutions,
+  (SELECT COUNT(*) FROM question_attempts) as total_attempts;
 
 -- View complete setup
 SELECT 
