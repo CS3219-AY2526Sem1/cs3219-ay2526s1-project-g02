@@ -2,10 +2,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: llm-service
+  namespace: noclue-app
   labels:
     app: llm-service
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: llm-service
   ports:

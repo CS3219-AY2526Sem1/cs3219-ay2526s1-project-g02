@@ -25,8 +25,23 @@ spec:
           value: "3000"
         - name: NODE_ENV
           value: "production"
+        # Backend service URLs (using external LoadBalancer IPs)
+        - name: NEXT_PUBLIC_USER_GRAPHQL_URL
+          value: "http://34.67.192.126:4001/graphql"
+        - name: NEXT_PUBLIC_QUESTION_GRAPHQL_URL
+          value: "http://34.16.114.117:4002/graphql"
+        - name: NEXT_PUBLIC_MATCHING_GRAPHQL_URL
+          value: "http://34.123.68.82:4003/graphql"
+        - name: NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL
+          value: "http://104.198.77.205:4004/graphql"
+        - name: NEXT_PUBLIC_LLM_SERVICE_URL
+          value: "http://34.121.74.235:4005"
+        - name: NEXT_PUBLIC_MATCHING_SERVICE_URL
+          value: "http://34.123.68.82:4003"
+        # Legacy fallback
         - name: NEXT_PUBLIC_GRAPHQL_URL
-          value: "http://user-service.noclue-app.svc.cluster.local:4001/graphql"
+          value: "http://34.67.192.126:4001/graphql"
+        # Supabase
         - name: NEXT_PUBLIC_SUPABASE_URL
           valueFrom:
             secretKeyRef:

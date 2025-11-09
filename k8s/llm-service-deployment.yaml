@@ -2,10 +2,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: llm-service
+  namespace: noclue-app
   labels:
     app: llm-service
+    service: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: llm-service
@@ -16,40 +18,40 @@ spec:
     spec:
       containers:
         - name: llm-service
-          image: gcr.io/YOUR_PROJECT_ID/llm-service:latest
+          image: gcr.io/noclue-476404/llm-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 4005
               name: http
+              protocol: TCP
+          envFrom:
+          - secretRef:
+              name: supabase-secrets
           env:
             - name: PORT
               value: "4005"
             - name: NODE_ENV
               value: "production"
-            - name: LLM_API_KEY
+            - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: llm-api-key
-            - name: LLM_MODEL
+                  name: supabase-secrets
+                  key: OPENAI_API_KEY
+            - name: SUPABASE_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: llm-model
-                  optional: true
+                secretKeyRef:
+                  name: supabase-secrets
+                  key: SUPABASE_SECRET_KEY
             - name: USER_SERVICE_URL
-              value: "http://user-service:4001"
+              value: "http://user-service.noclue-app.svc.cluster.local:4001"
             - name: QUESTION_SERVICE_URL
-              value: "http://question-service:4002"
+              value: "http://question-service.noclue-app.svc.cluster.local:4002"
             - name: MATCHING_SERVICE_URL
-              value: "http://matching-service:4003"
+              value: "http://matching-service.noclue-app.svc.cluster.local:4003"
             - name: COLLABORATION_SERVICE_URL
-              value: "http://collaboration-service:4004"
+              value: "http://collaboration-service.noclue-app.svc.cluster.local:4004"
             - name: CORS_ORIGIN
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: frontend-url
+              value: "https://noclue.com"
           resources:
             requests:
               memory: "256Mi"
