@@ -128,8 +128,8 @@ export const GET_TESTCASES_FOR_QUESTION = gql`
   }
 `;
 
-// User queries and mutations
-export const REGISTER = gql`
+// User queries and mutations (used with fetch(), not Apollo Client)
+export const REGISTER = `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
       message
@@ -137,7 +137,7 @@ export const REGISTER = gql`
   }
 `;
 
-export const LOGIN_MUTATION = gql`
+export const LOGIN_MUTATION = `
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       access_token
@@ -147,7 +147,7 @@ export const LOGIN_MUTATION = gql`
   }
 `;
 
-export const DELETE_ACCOUNT_WITH_INPUT = gql`
+export const DELETE_ACCOUNT_WITH_INPUT = `
   mutation DeleteAccount($input: DeleteAccountInput!) {
     deleteAccount(input: $input) {
       message
@@ -155,13 +155,13 @@ export const DELETE_ACCOUNT_WITH_INPUT = gql`
   }
 `;
 
-export const VERIFY_PASSWORD = gql`
+export const VERIFY_PASSWORD = `
   mutation Verify($input: VerifyPasswordInput!) {
     verifyPassword(input: $input)
   }
 `;
 
-export const UPDATE_PASSWORD = gql`
+export const UPDATE_PASSWORD = `
   mutation UpdatePassword($input: UpdatePasswordInput!) {
     updatePassword(input: $input) {
       message
@@ -169,7 +169,7 @@ export const UPDATE_PASSWORD = gql`
   }
 `;
 
-export const RESET_PASSWORD_LINK = gql`
+export const RESET_PASSWORD_LINK = `
   mutation ResetPasswordLink($input: ResetPasswordInput!) {
     resetPasswordLink(input: $input) {
       message
@@ -177,13 +177,13 @@ export const RESET_PASSWORD_LINK = gql`
   }
 `;
 
-export const IS_EMAIL_TAKEN = gql`
+export const IS_EMAIL_TAKEN = `
   query IsEmailTaken($email: String!) {
     isEmailTaken(email: $email)
   }
 `;
 
-export const IS_USERNAME_TAKEN = gql`
+export const IS_USERNAME_TAKEN = `
   query IsUsernameTaken($username: String!) {
     isUsernameTaken(username: $username)
   }
@@ -195,7 +195,7 @@ export const MY_USERNAME_QUERY = gql`
   }
 `;
 
-export const UPDATE_MY_USERNAME = gql`
+export const UPDATE_MY_USERNAME = `
   mutation UpdateMyUsername($id: String!, $username: String!) {
     updateMyUsername(id: $id, username: $username) {
       message
