@@ -132,11 +132,23 @@ create_secrets() {
     fi
 
     if [ "$use_env_vars" = true ]; then
-        # Create supabase-secrets from environment variables
-        create_or_update_secret "supabase-secrets" "$NAMESPACE" \
-            --from-literal=SUPABASE_URL="$SUPABASE_URL" \
-            --from-literal=SUPABASE_SECRET_KEY="$SUPABASE_SECRET_KEY" \
+        # Build secret creation command
+        local secret_args=(
+            --from-literal=SUPABASE_URL="$SUPABASE_URL"
+            --from-literal=SUPABASE_SECRET_KEY="$SUPABASE_SECRET_KEY"
             --from-literal=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+        )
+        
+        # Add OpenAI API key if provided
+        if [ -n "$OPENAI_API_KEY" ]; then
+            secret_args+=(--from-literal=OPENAI_API_KEY="$OPENAI_API_KEY")
+            log_info "Including OpenAI API key in secrets"
+        else
+            log_warning "OPENAI_API_KEY not set - LLM service may not work"
+        fi
+        
+        # Create supabase-secrets from environment variables
+        create_or_update_secret "supabase-secrets" "$NAMESPACE" "${secret_args[@]}"
 
         log_success "Created/Updated 'supabase-secrets' secret"
     else

@@ -157,9 +157,18 @@ jobs:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         chmod +x ./scripts/deploy-services.sh
         ./scripts/deploy-services.sh
+
+    # Update frontend with backend LoadBalancer URLs
+    - name: Update Frontend URLs
+      run: |
+        chmod +x ./scripts/update-frontend-urls.sh
+        ./scripts/update-frontend-urls.sh
+      env:
+        NAMESPACE: ${{ env.NAMESPACE }}
 
     # Get service URLs
     - name: Get Service URLs

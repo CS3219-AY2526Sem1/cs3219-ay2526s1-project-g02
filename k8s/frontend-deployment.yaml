@@ -25,8 +25,44 @@ spec:
           value: "3000"
         - name: NODE_ENV
           value: "production"
+        # Backend service URLs (from ConfigMap - auto-updated)
+        - name: NEXT_PUBLIC_USER_GRAPHQL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: USER_SERVICE_URL
+        - name: NEXT_PUBLIC_QUESTION_GRAPHQL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: QUESTION_SERVICE_URL
+        - name: NEXT_PUBLIC_MATCHING_GRAPHQL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: MATCHING_SERVICE_URL
+        - name: NEXT_PUBLIC_COLLABORATION_GRAPHQL_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: COLLABORATION_SERVICE_URL
+        - name: NEXT_PUBLIC_LLM_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: LLM_SERVICE_URL
+        - name: NEXT_PUBLIC_MATCHING_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: MATCHING_WS_URL
+        # Legacy fallback
         - name: NEXT_PUBLIC_GRAPHQL_URL
-          value: "http://user-service.noclue-app.svc.cluster.local:4001/graphql"
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: USER_SERVICE_URL
+        # Supabase
         - name: NEXT_PUBLIC_SUPABASE_URL
           valueFrom:
             secretKeyRef:
