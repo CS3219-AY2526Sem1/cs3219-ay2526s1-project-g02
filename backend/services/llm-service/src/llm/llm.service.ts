@@ -22,14 +22,18 @@ interface Question {
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
-  private readonly openai: OpenAI;
+  private readonly openai?: OpenAI;
 
   constructor(@Inject(SUPABASE) private readonly supabase: SupabaseClient) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not set in environment variables");
+      this.logger.warn("OPENAI_API_KEY is not set - OpenAI provider will not be available");
+      this.logger.warn("Using LLM_PROVIDER=vertex is recommended (uses GCP credits)");
+      // Don't initialize OpenAI client if no API key
+    } else {
+      this.openai = new OpenAI({ apiKey });
+      this.logger.log("OpenAI client initialized");
     }
-    this.openai = new OpenAI({ apiKey });
   }
 
   /**
@@ -67,6 +71,10 @@ export class LlmService {
   async explainQuestion(
     request: QuestionExplanationRequestDto
   ): Promise<QuestionExplanationResponse> {
+    if (!this.openai) {
+      throw new Error("OpenAI is not configured. Set OPENAI_API_KEY or use LLM_PROVIDER=vertex");
+    }
+    
     try {
       const question = await this.getQuestion(request.questionId);
 
@@ -160,6 +168,10 @@ Please provide:
    * Returns an async generator for streaming responses
    */
   async *chatStream(request: ChatRequestDto): AsyncGenerator<string, void, unknown> {
+    if (!this.openai) {
+      throw new Error("OpenAI is not configured. Set OPENAI_API_KEY or use LLM_PROVIDER=vertex");
+    }
+    
     try {
       const question = await this.getQuestion(request.questionId);
 
