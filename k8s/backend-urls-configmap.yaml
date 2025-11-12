@@ -1,0 +1,19 @@
+# ConfigMap for backend service URLs
+# This is used by the frontend to connect to backend services
+# Update this after deployment with actual LoadBalancer IPs using scripts/update-frontend-urls.sh
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-urls
+  namespace: noclue-app
+data:
+  # Default values - will be updated by update-frontend-urls.sh script
+  # These are placeholders and should be replaced with actual LoadBalancer IPs
+  USER_SERVICE_URL: "http://localhost:4001/graphql"
+  QUESTION_SERVICE_URL: "http://localhost:4002/graphql"
+  MATCHING_SERVICE_URL: "http://localhost:4003/graphql"
+  COLLABORATION_SERVICE_URL: "http://localhost:4004/graphql"
+  LLM_SERVICE_URL: "http://localhost:4005"
+  MATCHING_WS_URL: "http://localhost:4003"
+  COLLABORATION_WS_URL: "ws://localhost:1234"
+

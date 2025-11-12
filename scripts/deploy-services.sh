@@ -96,24 +96,28 @@ main() {
     log_step "Step 5: Verifying Pub/Sub configuration..."
     verify_pubsub_config
 
-    # Step 6: Apply Services
-    log_step "Step 6: Applying Kubernetes Services..."
+    # Step 6: Apply ConfigMaps
+    log_step "Step 6: Applying ConfigMaps..."
+    apply_configmaps
+
+    # Step 7: Apply Services
+    log_step "Step 7: Applying Kubernetes Services..."
     apply_services
 
-    # Step 7: Apply Deployments
-    log_step "Step 7: Deploying microservices..."
+    # Step 8: Apply Deployments
+    log_step "Step 8: Deploying microservices..."
     deploy_services
 
-    # Step 8: Restart deployments to pull latest images
-    log_step "Step 8: Restarting deployments to pull latest images..."
+    # Step 9: Restart deployments to pull latest images
+    log_step "Step 9: Restarting deployments to pull latest images..."
     restart_deployments
 
-    # Step 9: Wait for deployments to be ready
-    log_step "Step 9: Waiting for deployments to be ready..."
+    # Step 10: Wait for deployments to be ready
+    log_step "Step 10: Waiting for deployments to be ready..."
     wait_for_deployments
 
-    # Step 10: Display service URLs
-    log_step "Step 10: Getting service URLs..."
+    # Step 11: Display service URLs
+    log_step "Step 11: Getting service URLs..."
     display_service_urls
 
     # Final summary
@@ -176,6 +180,29 @@ create_secrets() {
             exit 1
         fi
     fi
+}
+
+# Apply ConfigMaps
+apply_configmaps() {
+    log_info "Applying ConfigMaps..."
+    
+    local configmaps=(
+        "frontend-url-configmap.yaml"
+        "backend-urls-configmap.yaml"
+    )
+    
+    for configmap_file in "${configmaps[@]}"; do
+        local configmap_path="$K8S_DIR/$configmap_file"
+        if [ -f "$configmap_path" ]; then
+            log_info "Applying ConfigMap: $configmap_file"
+            kubectl apply -f "$configmap_path"
+            log_success "Applied $configmap_file"
+        else
+            log_warning "ConfigMap file not found: $configmap_path"
+        fi
+    done
+    
+    log_success "ConfigMaps applied"
 }
 
 # Verify Pub/Sub configuration
