@@ -99,11 +99,11 @@ export default function MatchingPage() {
                 />
 
                 {/* Status and Socket Footer */}
-                <MatchingFooter 
+                {/* <MatchingFooter 
                     status={status}
                     socketStatus={socketStatus}
                     matchResult={matchResult}
-                />
+                /> */}
             </div>
         </PageLayout>
     );
