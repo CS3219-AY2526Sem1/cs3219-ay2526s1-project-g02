@@ -232,8 +232,7 @@ export default function EditorPage() {
       const { WebSocketService } = await import(
         "@/lib/services/web-socket-service"
       );
-      const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
-      if (!WS_URL) throw new Error("NEXT_PUBLIC_WS_URL is not set");
+      const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:1234";
       const service = new WebSocketService(WS_URL, sessionId);
       setWebSocketService(service);
       service.onStatusChange(onStatusChange);

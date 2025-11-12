@@ -64,6 +64,7 @@ kubectl create configmap backend-urls \
   --from-literal=COLLABORATION_SERVICE_URL="http://${COLLABORATION_SERVICE_IP}:4004/graphql" \
   --from-literal=LLM_SERVICE_URL="http://${LLM_SERVICE_IP}:4005" \
   --from-literal=MATCHING_WS_URL="http://${MATCHING_SERVICE_IP}:4003" \
+  --from-literal=COLLABORATION_WS_URL="ws://${COLLABORATION_SERVICE_IP}:1234" \
   -n $NAMESPACE \
   --dry-run=client -o yaml | kubectl apply -f -
 
@@ -79,4 +80,5 @@ echo "   Question:      http://${QUESTION_SERVICE_IP}:4002/graphql"
 echo "   Matching:      http://${MATCHING_SERVICE_IP}:4003/graphql"
 echo "   Collaboration: http://${COLLABORATION_SERVICE_IP}:4004/graphql"
 echo "   LLM:           http://${LLM_SERVICE_IP}:4005"
+echo "   WebSocket:     ws://${COLLABORATION_SERVICE_IP}:1234"
 

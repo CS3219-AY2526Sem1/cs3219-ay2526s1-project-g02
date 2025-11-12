@@ -56,6 +56,11 @@ spec:
             configMapKeyRef:
               name: backend-urls
               key: MATCHING_WS_URL
+        - name: NEXT_PUBLIC_WS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-urls
+              key: COLLABORATION_WS_URL
         # Legacy fallback
         - name: NEXT_PUBLIC_GRAPHQL_URL
           valueFrom:
