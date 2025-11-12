@@ -322,6 +322,7 @@ apply_services() {
         "question-service-service.yaml"
         "matching-service-service.yaml"
         "collaboration-service-service.yaml"
+        "llm-service-service.yaml"
         "frontend-service.yaml"
     )
 
@@ -345,6 +346,7 @@ deploy_services() {
         "question-service"
         "matching-service"
         "collaboration-service"
+        "llm-service"
         "frontend"
     )
 
@@ -379,6 +381,7 @@ restart_deployments() {
         "question-service"
         "matching-service"
         "collaboration-service"
+        "llm-service"
         "frontend"
     )
 
@@ -404,6 +407,7 @@ wait_for_deployments() {
         "question-service"
         "matching-service"
         "collaboration-service"
+        "llm-service"
         "frontend"
     )
 
@@ -445,6 +449,7 @@ display_service_urls() {
         "question-service"
         "matching-service"
         "collaboration-service"
+        "llm-service"
         "frontend"
     )
 
@@ -474,6 +479,7 @@ display_service_urls() {
     echo "  question-service:      http://question-service.${NAMESPACE}.svc.cluster.local:4002"
     echo "  matching-service:      http://matching-service.${NAMESPACE}.svc.cluster.local:4003"
     echo "  collaboration-service: http://collaboration-service.${NAMESPACE}.svc.cluster.local:4004"
+    echo "  llm-service:           http://llm-service.${NAMESPACE}.svc.cluster.local:4005"
     echo ""
 }
 

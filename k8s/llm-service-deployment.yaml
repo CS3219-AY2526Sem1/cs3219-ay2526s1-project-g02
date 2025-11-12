@@ -81,18 +81,31 @@ spec:
             httpGet:
               path: /health
               port: 4005
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
+              scheme: HTTP
+            initialDelaySeconds: 45  # Give time for Vertex AI/OpenAI initialization
+            periodSeconds: 15
+            timeoutSeconds: 10
             failureThreshold: 3
+            successThreshold: 1
           readinessProbe:
             httpGet:
               path: /health
               port: 4005
-            initialDelaySeconds: 20
+              scheme: HTTP
+            initialDelaySeconds: 30  # Give time for dependencies to load
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 5
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 4005
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10  # Allow up to 100 seconds for startup
       volumes:
       - name: gcp-key
         secret:
