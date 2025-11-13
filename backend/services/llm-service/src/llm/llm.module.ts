@@ -1,16 +1,19 @@
 import { Module } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { LlmController } from "./llm.controller";
 import { LlmService } from "./llm.service";
 import { LlmVertexService } from "./llm-vertex.service";
-import { SUPABASE } from "../supabase/supabase.module";
+import { SupabaseModule, SUPABASE } from "../supabase/supabase.module";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 // Provider token
 export const LLM_SERVICE = 'LLM_SERVICE';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule,
+    SupabaseModule,
+  ],
   controllers: [LlmController],
   providers: [
     {
